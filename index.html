@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MudanzApp - Inventario de Mudanza</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        mudanza: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+        vender: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' },
+        regalar: { 50: '#fdf4ff', 100: '#fae8ff', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce' },
+      }
+    }
+  }
+}
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  body { font-family: 'Inter', sans-serif; }
+  .category-mudanza { --cat-bg: #eff6ff; --cat-border: #3b82f6; --cat-text: #1d4ed8; }
+  .category-vender { --cat-bg: #f0fdf4; --cat-border: #22c55e; --cat-text: #15803d; }
+  .category-regalar { --cat-bg: #fdf4ff; --cat-border: #a855f7; --cat-text: #7e22ce; }
+  .cat-badge { background: var(--cat-bg); color: var(--cat-text); border: 1px solid var(--cat-border); }
+  .status-pendiente { background: #fef3c7; color: #92400e; }
+  .status-vendido { background: #d1fae5; color: #065f46; }
+  .status-movido { background: #dbeafe; color: #1e40af; }
+  .status-regalado { background: #ede9fe; color: #5b21b6; }
+  .fade-in { animation: fadeIn 0.3s ease-in; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .glass { background: rgba(255,255,255,0.8); backdrop-filter: blur(12px); }
+  .photo-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+  .cat-btn { transition: all 0.15s; }
+  .cat-btn.selected { transform: scale(1.05); box-shadow: 0 0 0 3px rgba(0,0,0,0.1); }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .sync-dot.online { background: #22c55e; }
+  .sync-dot.offline { background: #ef4444; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- Header -->
+<header class="glass sticky top-0 z-40 border-b border-gray-200/50">
+  <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">📦</span>
+      <h1 class="text-lg font-bold text-gray-900">MudanzApp</h1>
+      <div id="syncIndicator" class="flex items-center gap-1 ml-1">
+        <div class="sync-dot offline" id="syncDot"></div>
+        <span class="text-[10px] text-gray-400" id="syncText">Conectando...</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="exportData()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100" title="Exportar CSV">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+      </button>
+      <button onclick="showAddManual()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100" title="Anadir manual">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Stats Bar -->
+<div class="max-w-2xl mx-auto px-4 py-3">
+  <div id="statsBar" class="grid grid-cols-4 gap-2 text-center"></div>
+</div>
+
+<!-- Progress Bar -->
+<div class="max-w-2xl mx-auto px-4 pb-2">
+  <div id="progressBar" class="hidden">
+    <div class="flex items-center justify-between mb-1">
+      <span class="text-xs font-medium text-gray-500">Progreso</span>
+      <span id="progressPct" class="text-xs font-bold text-gray-700">0%</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+      <div id="progressFill" class="bg-gradient-to-r from-blue-500 via-green-500 to-purple-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="max-w-2xl mx-auto px-4 pb-2">
+  <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
+    <button onclick="setFilter('todos')" data-filter="todos" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">Todos</button>
+    <button onclick="setFilter('mudanza')" data-filter="mudanza" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">🏠 Mudanza</button>
+    <button onclick="setFilter('vender')" data-filter="vender" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">💰 Vender</button>
+    <button onclick="setFilter('regalar')" data-filter="regalar" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">🎁 Regalar</button>
+  </div>
+</div>
+
+<!-- Status Filter -->
+<div class="max-w-2xl mx-auto px-4 pb-3">
+  <div class="flex gap-1 flex-wrap">
+    <button onclick="setStatusFilter('todos')" data-status="todos" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Todos</button>
+    <button onclick="setStatusFilter('pendiente')" data-status="pendiente" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Pendiente</button>
+    <button onclick="setStatusFilter('vendido')" data-status="vendido" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Vendido</button>
+    <button onclick="setStatusFilter('movido')" data-status="movido" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Movido</button>
+    <button onclick="setStatusFilter('regalado')" data-status="regalado" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Regalado</button>
+  </div>
+</div>
+
+<!-- Items List -->
+<div class="max-w-2xl mx-auto px-4 pb-32">
+  <div id="itemsList" class="space-y-2"></div>
+  <div id="emptyState" class="hidden text-center py-16">
+    <div class="text-6xl mb-4">📸</div>
+    <h3 class="text-lg font-semibold text-gray-700 mb-2">Sin objetos todavia</h3>
+    <p class="text-sm text-gray-500">Haz una foto o pulsa + para anadir objetos<br>a tu inventario de mudanza</p>
+  </div>
+</div>
+
+<!-- Add Item Modal -->
+<div id="addModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
+  <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-gray-900">Nuevo objeto</h2>
+      <button onclick="closeAddModal()" class="text-gray-400 hover:text-gray-600 p-1">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <div id="addPhotoPreview" class="hidden mb-4">
+      <img id="addPhotoImg" class="w-full h-48 object-cover rounded-xl">
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Que es?</label>
+      <input id="addName" type="text" placeholder="Ej: Sofa gris, Lampara de pie..."
+        class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Que hacemos con ello?</label>
+      <div class="grid grid-cols-3 gap-2" id="addCategoryBtns">
+        <button type="button" onclick="selectCategory('mudanza')" data-cat="mudanza"
+          class="cat-btn py-3 px-3 rounded-xl text-sm font-semibold border-2 border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400 text-center">
+          🏠<br>Mudanza
+        </button>
+        <button type="button" onclick="selectCategory('vender')" data-cat="vender"
+          class="cat-btn py-3 px-3 rounded-xl text-sm font-semibold border-2 border-green-200 bg-green-50 text-green-700 hover:border-green-400 text-center">
+          💰<br>Vender
+        </button>
+        <button type="button" onclick="selectCategory('regalar')" data-cat="regalar"
+          class="cat-btn py-3 px-3 rounded-xl text-sm font-semibold border-2 border-purple-200 bg-purple-50 text-purple-700 hover:border-purple-400 text-center">
+          🎁<br>Regalar
+        </button>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Habitacion</label>
+      <div class="flex flex-wrap gap-2" id="roomButtons"></div>
+      <input id="addRoom" type="text" placeholder="O escribe una nueva..."
+        class="w-full mt-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="mb-5">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Notas (opcional)</label>
+      <input id="addNotes" type="text" placeholder="Estado, tamano, precio..."
+        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <button onclick="submitItem()" class="w-full py-3.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition text-sm">
+      Anadir al inventario
+    </button>
+    <button onclick="submitAndAnother()" class="w-full py-2.5 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-xl transition mt-2">
+      Anadir y crear otro
+    </button>
+  </div>
+</div>
+
+<!-- Item Detail Modal -->
+<div id="itemModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
+  <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[80vh] overflow-y-auto p-6" id="itemModalContent"></div>
+</div>
+
+<!-- Hidden file/camera inputs -->
+<input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event)">
+<input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handlePhoto(event)">
+
+<!-- FAB Buttons -->
+<div class="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
+  <button onclick="document.getElementById('fileInput').click()" class="w-12 h-12 bg-white text-gray-600 rounded-xl shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all" title="Subir imagen">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+  </button>
+  <button onclick="document.getElementById('cameraInput').click()" class="w-16 h-16 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/30 flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all">
+    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+  </button>
+</div>
+
+<script>
+// ========== SUPABASE REST API ==========
+const API = 'https://ncwjdkqhjfaancghfljf.supabase.co/rest/v1';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jd2pka3FoamZhYW5jZ2hmbGpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNTA0NzAsImV4cCI6MjA5MDYyNjQ3MH0.BavhB5v9l2c8l5XMVJOt4fx0ZQgZKo11oEzUsXSEjJA';
+const HEADERS = {
+  'apikey': KEY,
+  'Authorization': 'Bearer ' + KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+// ========== STATE ==========
+let items = [];
+let currentFilter = 'todos';
+let currentStatusFilter = 'todos';
+let pendingPhoto = null;
+let selectedCategory = 'mudanza';
+const defaultRooms = ['Salon', 'Cocina', 'Dormitorio', 'Bano', 'Despacho', 'Terraza', 'Trastero', 'Garaje'];
+
+// ========== API SYNC ==========
+async function loadItems() {
+  try {
+    const res = await fetch(API + '/items?select=*&order=created_at.desc', { headers: HEADERS });
+    if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+    items = await res.json();
+    setSyncStatus(true);
+    renderItems();
+    renderStats();
+  } catch (e) {
+    setSyncStatus(false, e.message);
+  }
+}
+
+async function dbInsert(item) {
+  const res = await fetch(API + '/items', {
+    method: 'POST', headers: HEADERS, body: JSON.stringify(item)
+  });
+  if (!res.ok) throw new Error('Error al guardar');
+  const data = await res.json();
+  return data[0];
+}
+
+async function dbUpdate(id, fields) {
+  const res = await fetch(API + '/items?id=eq.' + id, {
+    method: 'PATCH', headers: HEADERS, body: JSON.stringify(fields)
+  });
+  if (!res.ok) throw new Error('Error al actualizar');
+}
+
+async function dbDelete(id) {
+  const res = await fetch(API + '/items?id=eq.' + id, {
+    method: 'DELETE', headers: HEADERS
+  });
+  if (!res.ok) throw new Error('Error al eliminar');
+}
+
+// Polling cada 3s para sync entre dispositivos
+let pollTimer = null;
+function startPolling() {
+  pollTimer = setInterval(loadItems, 3000);
+}
+
+function setSyncStatus(online, detail) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  dot.className = 'sync-dot ' + (online ? 'online' : 'offline');
+  text.textContent = online ? 'Sincronizado' : (detail || 'Sin conexion');
+}
+
+// ========== PHOTO HANDLING ==========
+function handlePhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxSize = 300;
+      const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingPhoto = canvas.toDataURL('image/jpeg', 0.6);
+      showAddModal(true);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+// ========== ADD MODAL ==========
+function showAddModal(withPhoto) {
+  const preview = document.getElementById('addPhotoPreview');
+  const img = document.getElementById('addPhotoImg');
+  if (withPhoto && pendingPhoto) {
+    preview.classList.remove('hidden');
+    img.src = pendingPhoto;
+  } else {
+    preview.classList.add('hidden');
+    pendingPhoto = null;
+  }
+  document.getElementById('addName').value = '';
+  document.getElementById('addNotes').value = '';
+  document.getElementById('addRoom').value = '';
+  selectCategory('mudanza');
+  renderRoomButtons();
+  document.getElementById('addModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('addName').focus(), 100);
+}
+
+function showAddManual() {
+  pendingPhoto = null;
+  showAddModal(false);
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').classList.add('hidden');
+  pendingPhoto = null;
+}
+
+function selectCategory(cat) {
+  selectedCategory = cat;
+  document.querySelectorAll('#addCategoryBtns .cat-btn').forEach(btn => {
+    const isSel = btn.dataset.cat === cat;
+    btn.classList.toggle('selected', isSel);
+    btn.classList.toggle('ring-2', isSel);
+    btn.classList.toggle('ring-offset-1', isSel);
+    const colors = { mudanza: 'ring-blue-500 border-blue-500', vender: 'ring-green-500 border-green-500', regalar: 'ring-purple-500 border-purple-500' };
+    colors[btn.dataset.cat].split(' ').forEach(c => btn.classList.toggle(c, isSel && btn.dataset.cat === cat));
+  });
+}
+
+function renderRoomButtons() {
+  const usedRooms = [...new Set(items.map(i => i.habitacion).filter(Boolean))];
+  const allRooms = [...new Set([...usedRooms, ...defaultRooms])];
+  document.getElementById('roomButtons').innerHTML = allRooms.map(room => `
+    <button type="button" onclick="document.getElementById('addRoom').value='${room}'"
+      class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition">${room}</button>
+  `).join('');
+}
+
+async function createItem() {
+  const name = document.getElementById('addName').value.trim();
+  if (!name) {
+    document.getElementById('addName').classList.add('ring-2', 'ring-red-500');
+    setTimeout(() => document.getElementById('addName').classList.remove('ring-2', 'ring-red-500'), 1500);
+    return null;
+  }
+
+  const room = document.getElementById('addRoom').value.trim() || 'Sin asignar';
+  const notes = document.getElementById('addNotes').value.trim();
+
+  try {
+    const data = await dbInsert({
+      nombre: name,
+      categoria: selectedCategory,
+      habitacion: room,
+      notas: notes,
+      estado: 'pendiente',
+      foto: pendingPhoto || null
+    });
+    items.unshift(data);
+    renderItems();
+    renderStats();
+    return data;
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+    return null;
+  }
+}
+
+async function submitItem() {
+  const item = await createItem();
+  if (item) closeAddModal();
+}
+
+async function submitAndAnother() {
+  const item = await createItem();
+  if (item) {
+    document.getElementById('addName').value = '';
+    document.getElementById('addNotes').value = '';
+    setTimeout(() => document.getElementById('addName').focus(), 100);
+  }
+}
+
+// ========== ITEM ACTIONS ==========
+async function deleteItem(id) {
+  if (!confirm('Eliminar este objeto?')) return;
+  try {
+    await dbDelete(id);
+    items = items.filter(i => i.id !== id);
+    renderItems();
+    renderStats();
+    document.getElementById('itemModal').classList.add('hidden');
+  } catch(e) { alert(e.message); }
+}
+
+async function updateItemStatus(id, status) {
+  try {
+    await dbUpdate(id, { estado: status });
+    const item = items.find(i => i.id === id);
+    if (item) item.estado = status;
+    renderItems();
+    renderStats();
+    showItemDetail(id);
+  } catch(e) { alert(e.message); }
+}
+
+async function updateItemCategory(id, category) {
+  try {
+    await dbUpdate(id, { categoria: category });
+    const item = items.find(i => i.id === id);
+    if (item) item.categoria = category;
+    renderItems();
+    renderStats();
+    showItemDetail(id);
+  } catch(e) { alert(e.message); }
+}
+
+// ========== FILTERS ==========
+function setFilter(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(t => {
+    t.classList.toggle('bg-white', t.dataset.filter === filter);
+    t.classList.toggle('shadow-sm', t.dataset.filter === filter);
+    t.classList.toggle('text-gray-900', t.dataset.filter === filter);
+    t.classList.toggle('text-gray-500', t.dataset.filter !== filter);
+  });
+  renderItems();
+}
+
+function setStatusFilter(status) {
+  currentStatusFilter = status;
+  document.querySelectorAll('.status-tab').forEach(t => {
+    t.classList.toggle('bg-gray-900', t.dataset.status === status);
+    t.classList.toggle('text-white', t.dataset.status === status);
+    t.classList.toggle('border-gray-900', t.dataset.status === status);
+    t.classList.toggle('text-gray-500', t.dataset.status !== status);
+    t.classList.toggle('border-gray-200', t.dataset.status !== status);
+  });
+  renderItems();
+}
+
+// ========== RENDERING ==========
+function renderStats() {
+  const total = items.length;
+  const pendientes = items.filter(i => i.estado === 'pendiente').length;
+  const completados = total - pendientes;
+  const pct = total > 0 ? Math.round((completados / total) * 100) : 0;
+
+  const catCounts = { mudanza: 0, vender: 0, regalar: 0 };
+  items.forEach(i => catCounts[i.categoria]++);
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="bg-white rounded-xl p-2 shadow-sm border border-gray-100">
+      <div class="text-lg font-bold text-gray-900">${total}</div>
+      <div class="text-[10px] text-gray-500 font-medium">Total</div>
+    </div>
+    <div class="bg-blue-50 rounded-xl p-2 border border-blue-100">
+      <div class="text-lg font-bold text-blue-700">${catCounts.mudanza}</div>
+      <div class="text-[10px] text-blue-600 font-medium">Mudanza</div>
+    </div>
+    <div class="bg-green-50 rounded-xl p-2 border border-green-100">
+      <div class="text-lg font-bold text-green-700">${catCounts.vender}</div>
+      <div class="text-[10px] text-green-600 font-medium">Vender</div>
+    </div>
+    <div class="bg-purple-50 rounded-xl p-2 border border-purple-100">
+      <div class="text-lg font-bold text-purple-700">${catCounts.regalar}</div>
+      <div class="text-[10px] text-purple-600 font-medium">Regalar</div>
+    </div>
+  `;
+
+  const bar = document.getElementById('progressBar');
+  if (total > 0) {
+    bar.classList.remove('hidden');
+    document.getElementById('progressPct').textContent = pct + '% completado';
+    document.getElementById('progressFill').style.width = pct + '%';
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function renderItems() {
+  let filtered = items;
+  if (currentFilter !== 'todos') filtered = filtered.filter(i => i.categoria === currentFilter);
+  if (currentStatusFilter !== 'todos') filtered = filtered.filter(i => i.estado === currentStatusFilter);
+
+  const list = document.getElementById('itemsList');
+  const empty = document.getElementById('emptyState');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  const rooms = {};
+  filtered.forEach(item => {
+    const room = item.habitacion || 'Sin asignar';
+    if (!rooms[room]) rooms[room] = [];
+    rooms[room].push(item);
+  });
+
+  list.innerHTML = Object.entries(rooms).map(([room, roomItems]) => `
+    <div class="fade-in">
+      <div class="flex items-center gap-2 py-2">
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">${room}</span>
+        <span class="text-xs text-gray-300">(${roomItems.length})</span>
+        <div class="flex-1 border-t border-gray-100"></div>
+      </div>
+      <div class="space-y-2">
+        ${roomItems.map(renderItemCard).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderItemCard(item) {
+  const catEmoji = { mudanza: '🏠', vender: '💰', regalar: '🎁' }[item.categoria];
+  const statusLabels = { pendiente: 'Pendiente', vendido: 'Vendido', movido: 'Movido', regalado: 'Regalado' };
+  const isDone = item.estado !== 'pendiente';
+  return `
+    <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:shadow-md transition active:scale-[0.99] ${isDone ? 'opacity-60' : ''}"
+         onclick="showItemDetail('${item.id}')">
+      ${item.foto ? `<img src="${item.foto}" class="photo-thumb flex-shrink-0">` :
+        `<div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl">${catEmoji}</div>`}
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold text-sm text-gray-900 truncate ${isDone ? 'line-through' : ''}">${item.nombre}</div>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="category-${item.categoria} cat-badge text-[10px] font-semibold px-2 py-0.5 rounded-full">${catEmoji} ${item.categoria}</span>
+          <span class="status-${item.estado} text-[10px] font-semibold px-2 py-0.5 rounded-full">${statusLabels[item.estado]}</span>
+        </div>
+      </div>
+      <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+    </div>
+  `;
+}
+
+function showItemDetail(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const statusLabels = { pendiente: 'Pendiente', vendido: 'Vendido', movido: 'Movido', regalado: 'Regalado' };
+
+  document.getElementById('itemModalContent').innerHTML = `
+    <div class="flex items-start justify-between mb-4">
+      <div class="flex items-center gap-3">
+        ${item.foto ? `<img src="${item.foto}" class="w-16 h-16 rounded-xl object-cover">` : ''}
+        <div>
+          <h3 class="font-bold text-gray-900">${item.nombre}</h3>
+          <p class="text-sm text-gray-500">${item.habitacion}</p>
+        </div>
+      </div>
+      <button onclick="document.getElementById('itemModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 p-1">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    ${item.notas ? `<p class="text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg">${item.notas}</p>` : ''}
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Categoria</label>
+      <div class="grid grid-cols-3 gap-2">
+        ${['mudanza', 'vender', 'regalar'].map(cat => `
+          <button onclick="updateItemCategory('${item.id}','${cat}')"
+            class="py-2 px-3 rounded-xl text-xs font-semibold border-2 transition ${item.categoria === cat ?
+              (cat === 'mudanza' ? 'border-blue-500 bg-blue-50 text-blue-700' :
+               cat === 'vender' ? 'border-green-500 bg-green-50 text-green-700' :
+               'border-purple-500 bg-purple-50 text-purple-700') :
+              'border-gray-200 text-gray-500 hover:border-gray-300'}">
+            ${{mudanza:'🏠 Mudanza', vender:'💰 Vender', regalar:'🎁 Regalar'}[cat]}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="mb-6">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Estado</label>
+      <div class="grid grid-cols-2 gap-2">
+        ${['pendiente', 'vendido', 'movido', 'regalado'].map(st => `
+          <button onclick="updateItemStatus('${item.id}','${st}')"
+            class="py-2.5 px-3 rounded-xl text-xs font-semibold border-2 transition ${item.estado === st ?
+              'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-500 hover:border-gray-300'}">
+            ${statusLabels[st]}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <button onclick="deleteItem('${item.id}')" class="w-full py-2.5 text-red-500 text-sm font-medium hover:bg-red-50 rounded-xl transition">
+      Eliminar objeto
+    </button>
+  `;
+  document.getElementById('itemModal').classList.remove('hidden');
+}
+
+// ========== EXPORT ==========
+function exportData() {
+  if (items.length === 0) { alert('No hay datos para exportar'); return; }
+  const headers = ['Nombre', 'Categoria', 'Estado', 'Habitacion', 'Notas', 'Fecha'];
+  const rows = items.map(i => [
+    i.nombre, i.categoria, i.estado, i.habitacion, i.notas, new Date(i.created_at).toLocaleDateString('es-ES')
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${(c||'').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inventario-mudanza-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ========== INIT ==========
+document.getElementById('addModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('addModal')) closeAddModal();
+});
+document.getElementById('itemModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('itemModal')) document.getElementById('itemModal').classList.add('hidden');
+});
+
+setFilter('todos');
+setStatusFilter('todos');
+renderStats();
+
+loadItems();
+startPolling();
+</script>
+</body>
+</html>
