@@ -158,9 +158,21 @@ tailwind.config = {
         class="w-full mt-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
 
+    <div class="mb-4" id="addPrecioWrap">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Precio (EUR)</label>
+      <input id="addPrecio" type="number" step="0.01" min="0" placeholder="Ej: 50"
+        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="mb-4" id="addLinkWrap">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Link (Wallapop, etc.)</label>
+      <input id="addLink" type="url" placeholder="https://es.wallapop.com/..."
+        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
     <div class="mb-5">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Notas (opcional)</label>
-      <input id="addNotes" type="text" placeholder="Estado, tamano, precio..."
+      <input id="addNotes" type="text" placeholder="Estado, tamano..."
         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
 
@@ -299,6 +311,8 @@ function showAddModal(withPhoto) {
   document.getElementById('addName').value = '';
   document.getElementById('addNotes').value = '';
   document.getElementById('addRoom').value = '';
+  document.getElementById('addPrecio').value = '';
+  document.getElementById('addLink').value = '';
   selectCategory('mudanza');
   renderRoomButtons();
   document.getElementById('addModal').classList.remove('hidden');
@@ -325,6 +339,12 @@ function selectCategory(cat) {
     const colors = { mudanza: 'ring-blue-500 border-blue-500', vender: 'ring-green-500 border-green-500', regalar: 'ring-purple-500 border-purple-500' };
     colors[btn.dataset.cat].split(' ').forEach(c => btn.classList.toggle(c, isSel && btn.dataset.cat === cat));
   });
+  // Show precio/link only for vender
+  const show = cat === 'vender';
+  const precioWrap = document.getElementById('addPrecioWrap');
+  const linkWrap = document.getElementById('addLinkWrap');
+  if (precioWrap) precioWrap.style.display = show ? '' : 'none';
+  if (linkWrap) linkWrap.style.display = show ? '' : 'none';
 }
 
 function renderRoomButtons() {
@@ -347,6 +367,9 @@ async function createItem() {
   const room = document.getElementById('addRoom').value.trim() || 'Sin asignar';
   const notes = document.getElementById('addNotes').value.trim();
 
+  const precioVal = document.getElementById('addPrecio').value;
+  const link = document.getElementById('addLink').value.trim();
+
   try {
     const data = await dbInsert({
       nombre: name,
@@ -354,7 +377,9 @@ async function createItem() {
       habitacion: room,
       notas: notes,
       estado: 'pendiente',
-      foto: pendingPhoto || null
+      foto: pendingPhoto || null,
+      precio: precioVal ? parseFloat(precioVal) : null,
+      link: link || ''
     });
     items.unshift(data);
     renderItems();
@@ -524,9 +549,10 @@ function renderItemCard(item) {
         `<div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl">${catEmoji}</div>`}
       <div class="flex-1 min-w-0">
         <div class="font-semibold text-sm text-gray-900 truncate ${isDone ? 'line-through' : ''}">${item.nombre}</div>
-        <div class="flex items-center gap-2 mt-1">
+        <div class="flex items-center gap-2 mt-1 flex-wrap">
           <span class="category-${item.categoria} cat-badge text-[10px] font-semibold px-2 py-0.5 rounded-full">${catEmoji} ${item.categoria}</span>
           <span class="status-${item.estado} text-[10px] font-semibold px-2 py-0.5 rounded-full">${statusLabels[item.estado]}</span>
+          ${item.precio ? `<span class="text-[10px] font-bold text-green-700">${item.precio}€</span>` : ''}
         </div>
       </div>
       <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -538,21 +564,26 @@ function showItemDetail(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   const statusLabels = { pendiente: 'Pendiente', vendido: 'Vendido', movido: 'Movido', regalado: 'Regalado' };
+  const showVenderFields = item.categoria === 'vender';
 
   document.getElementById('itemModalContent').innerHTML = `
     <div class="flex items-start justify-between mb-4">
       <div class="flex items-center gap-3">
         ${item.foto ? `<img src="${item.foto}" class="w-16 h-16 rounded-xl object-cover">` : ''}
-        <div>
-          <h3 class="font-bold text-gray-900">${item.nombre}</h3>
-          <p class="text-sm text-gray-500">${item.habitacion}</p>
+        <div class="flex-1 min-w-0">
+          <input id="editNombre" type="text" value="${(item.nombre||'').replace(/"/g, '&quot;')}"
+            class="font-bold text-gray-900 w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none pb-0.5 text-sm"
+            onchange="updateItemField('${item.id}','nombre',this.value)">
+          <input id="editHabitacion" type="text" value="${(item.habitacion||'').replace(/"/g, '&quot;')}"
+            class="text-sm text-gray-500 w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none mt-0.5"
+            onchange="updateItemField('${item.id}','habitacion',this.value)">
         </div>
       </div>
-      <button onclick="document.getElementById('itemModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 p-1">
+      <button onclick="document.getElementById('itemModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
-    ${item.notas ? `<p class="text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg">${item.notas}</p>` : ''}
+
     <div class="mb-4">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Categoria</label>
       <div class="grid grid-cols-3 gap-2">
@@ -568,6 +599,31 @@ function showItemDetail(id) {
         `).join('')}
       </div>
     </div>
+
+    <div class="mb-4" style="${showVenderFields ? '' : 'display:none'}" id="detailPrecioWrap">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Precio (EUR)</label>
+      <input type="number" step="0.01" min="0" value="${item.precio || ''}" placeholder="Ej: 50"
+        class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onchange="updateItemField('${item.id}','precio',this.value ? parseFloat(this.value) : null)">
+    </div>
+
+    <div class="mb-4" style="${showVenderFields ? '' : 'display:none'}" id="detailLinkWrap">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Link</label>
+      <div class="flex gap-2">
+        <input id="editLink" type="url" value="${(item.link||'').replace(/"/g, '&quot;')}" placeholder="https://es.wallapop.com/..."
+          class="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onchange="updateItemField('${item.id}','link',this.value)">
+        ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener" class="px-3 py-2 bg-blue-100 text-blue-700 rounded-xl text-sm font-medium hover:bg-blue-200 flex-shrink-0 flex items-center">Abrir</a>` : ''}
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Notas</label>
+      <input type="text" value="${(item.notas||'').replace(/"/g, '&quot;')}" placeholder="Estado, detalles..."
+        class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onchange="updateItemField('${item.id}','notas',this.value)">
+    </div>
+
     <div class="mb-6">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Estado</label>
       <div class="grid grid-cols-2 gap-2">
@@ -580,6 +636,7 @@ function showItemDetail(id) {
         `).join('')}
       </div>
     </div>
+
     <button onclick="deleteItem('${item.id}')" class="w-full py-2.5 text-red-500 text-sm font-medium hover:bg-red-50 rounded-xl transition">
       Eliminar objeto
     </button>
@@ -587,12 +644,24 @@ function showItemDetail(id) {
   document.getElementById('itemModal').classList.remove('hidden');
 }
 
+async function updateItemField(id, field, value) {
+  try {
+    await dbUpdate(id, { [field]: value });
+    const item = items.find(i => i.id === id);
+    if (item) item[field] = value;
+    renderItems();
+    renderStats();
+    // If category changed to/from vender, re-render detail to show/hide fields
+    if (field === 'categoria') showItemDetail(id);
+  } catch(e) { alert(e.message); }
+}
+
 // ========== EXPORT ==========
 function exportData() {
   if (items.length === 0) { alert('No hay datos para exportar'); return; }
-  const headers = ['Nombre', 'Categoria', 'Estado', 'Habitacion', 'Notas', 'Fecha'];
+  const headers = ['Nombre', 'Categoria', 'Estado', 'Habitacion', 'Precio', 'Link', 'Notas', 'Fecha'];
   const rows = items.map(i => [
-    i.nombre, i.categoria, i.estado, i.habitacion, i.notas, new Date(i.created_at).toLocaleDateString('es-ES')
+    i.nombre, i.categoria, i.estado, i.habitacion, i.precio || '', i.link || '', i.notas, new Date(i.created_at).toLocaleDateString('es-ES')
   ]);
   const csv = [headers, ...rows].map(r => r.map(c => `"${(c||'').replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
