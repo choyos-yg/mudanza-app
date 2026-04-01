@@ -13,6 +13,7 @@ tailwind.config = {
         mudanza: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
         vender: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' },
         regalar: { 50: '#fdf4ff', 100: '#fae8ff', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce' },
+        indeciso: { 50: '#fff7ed', 100: '#ffedd5', 500: '#f97316', 600: '#ea580c', 700: '#c2410c' },
       }
     }
   }
@@ -24,6 +25,7 @@ tailwind.config = {
   .category-mudanza { --cat-bg: #eff6ff; --cat-border: #3b82f6; --cat-text: #1d4ed8; }
   .category-vender { --cat-bg: #f0fdf4; --cat-border: #22c55e; --cat-text: #15803d; }
   .category-regalar { --cat-bg: #fdf4ff; --cat-border: #a855f7; --cat-text: #7e22ce; }
+  .category-indeciso { --cat-bg: #fff7ed; --cat-border: #f97316; --cat-text: #c2410c; }
   .cat-badge { background: var(--cat-bg); color: var(--cat-text); border: 1px solid var(--cat-border); }
   .status-pendiente { background: #fef3c7; color: #92400e; }
   .status-vendido { background: #d1fae5; color: #065f46; }
@@ -66,7 +68,7 @@ tailwind.config = {
 
 <!-- Stats Bar -->
 <div class="max-w-2xl mx-auto px-4 py-3">
-  <div id="statsBar" class="grid grid-cols-4 gap-2 text-center"></div>
+  <div id="statsBar" class="grid grid-cols-5 gap-1.5 text-center"></div>
 </div>
 
 <!-- Progress Bar -->
@@ -85,10 +87,11 @@ tailwind.config = {
 <!-- Filter Tabs -->
 <div class="max-w-2xl mx-auto px-4 pb-2">
   <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
-    <button onclick="setFilter('todos')" data-filter="todos" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">Todos</button>
-    <button onclick="setFilter('mudanza')" data-filter="mudanza" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">🏠 Mudanza</button>
-    <button onclick="setFilter('vender')" data-filter="vender" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">💰 Vender</button>
-    <button onclick="setFilter('regalar')" data-filter="regalar" class="filter-tab flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition">🎁 Regalar</button>
+    <button onclick="setFilter('todos')" data-filter="todos" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">Todos</button>
+    <button onclick="setFilter('mudanza')" data-filter="mudanza" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🏠 Mudar</button>
+    <button onclick="setFilter('vender')" data-filter="vender" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">💰 Vender</button>
+    <button onclick="setFilter('regalar')" data-filter="regalar" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🎁 Regalar</button>
+    <button onclick="setFilter('indeciso')" data-filter="indeciso" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🤔 Indeciso</button>
   </div>
 </div>
 
@@ -135,18 +138,22 @@ tailwind.config = {
 
     <div class="mb-4">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Que hacemos con ello?</label>
-      <div class="grid grid-cols-3 gap-2" id="addCategoryBtns">
+      <div class="grid grid-cols-4 gap-2" id="addCategoryBtns">
         <button type="button" onclick="selectCategory('mudanza')" data-cat="mudanza"
-          class="cat-btn py-3 px-3 rounded-xl text-sm font-semibold border-2 border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400 text-center">
-          🏠<br>Mudanza
+          class="cat-btn py-3 px-2 rounded-xl text-xs font-semibold border-2 border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400 text-center">
+          🏠<br>Mudar
         </button>
         <button type="button" onclick="selectCategory('vender')" data-cat="vender"
-          class="cat-btn py-3 px-3 rounded-xl text-sm font-semibold border-2 border-green-200 bg-green-50 text-green-700 hover:border-green-400 text-center">
+          class="cat-btn py-3 px-2 rounded-xl text-xs font-semibold border-2 border-green-200 bg-green-50 text-green-700 hover:border-green-400 text-center">
           💰<br>Vender
         </button>
         <button type="button" onclick="selectCategory('regalar')" data-cat="regalar"
-          class="cat-btn py-3 px-3 rounded-xl text-sm font-semibold border-2 border-purple-200 bg-purple-50 text-purple-700 hover:border-purple-400 text-center">
+          class="cat-btn py-3 px-2 rounded-xl text-xs font-semibold border-2 border-purple-200 bg-purple-50 text-purple-700 hover:border-purple-400 text-center">
           🎁<br>Regalar
+        </button>
+        <button type="button" onclick="selectCategory('indeciso')" data-cat="indeciso"
+          class="cat-btn py-3 px-2 rounded-xl text-xs font-semibold border-2 border-orange-200 bg-orange-50 text-orange-700 hover:border-orange-400 text-center">
+          🤔<br>Indeciso
         </button>
       </div>
     </div>
@@ -336,7 +343,7 @@ function selectCategory(cat) {
     btn.classList.toggle('selected', isSel);
     btn.classList.toggle('ring-2', isSel);
     btn.classList.toggle('ring-offset-1', isSel);
-    const colors = { mudanza: 'ring-blue-500 border-blue-500', vender: 'ring-green-500 border-green-500', regalar: 'ring-purple-500 border-purple-500' };
+    const colors = { mudanza: 'ring-blue-500 border-blue-500', vender: 'ring-green-500 border-green-500', regalar: 'ring-purple-500 border-purple-500', indeciso: 'ring-orange-500 border-orange-500' };
     colors[btn.dataset.cat].split(' ').forEach(c => btn.classList.toggle(c, isSel && btn.dataset.cat === cat));
   });
   // Show precio/link only for vender
@@ -470,7 +477,7 @@ function renderStats() {
   const completados = total - pendientes;
   const pct = total > 0 ? Math.round((completados / total) * 100) : 0;
 
-  const catCounts = { mudanza: 0, vender: 0, regalar: 0 };
+  const catCounts = { mudanza: 0, vender: 0, regalar: 0, indeciso: 0 };
   items.forEach(i => catCounts[i.categoria]++);
 
   document.getElementById('statsBar').innerHTML = `
@@ -480,7 +487,7 @@ function renderStats() {
     </div>
     <div class="bg-blue-50 rounded-xl p-2 border border-blue-100">
       <div class="text-lg font-bold text-blue-700">${catCounts.mudanza}</div>
-      <div class="text-[10px] text-blue-600 font-medium">Mudanza</div>
+      <div class="text-[10px] text-blue-600 font-medium">Mudar</div>
     </div>
     <div class="bg-green-50 rounded-xl p-2 border border-green-100">
       <div class="text-lg font-bold text-green-700">${catCounts.vender}</div>
@@ -489,6 +496,10 @@ function renderStats() {
     <div class="bg-purple-50 rounded-xl p-2 border border-purple-100">
       <div class="text-lg font-bold text-purple-700">${catCounts.regalar}</div>
       <div class="text-[10px] text-purple-600 font-medium">Regalar</div>
+    </div>
+    <div class="bg-orange-50 rounded-xl p-2 border border-orange-100">
+      <div class="text-lg font-bold text-orange-700">${catCounts.indeciso}</div>
+      <div class="text-[10px] text-orange-600 font-medium">Indeciso</div>
     </div>
   `;
 
@@ -539,7 +550,7 @@ function renderItems() {
 }
 
 function renderItemCard(item) {
-  const catEmoji = { mudanza: '🏠', vender: '💰', regalar: '🎁' }[item.categoria];
+  const catEmoji = { mudanza: '🏠', vender: '💰', regalar: '🎁', indeciso: '🤔' }[item.categoria];
   const statusLabels = { pendiente: 'Pendiente', vendido: 'Vendido', movido: 'Movido', regalado: 'Regalado' };
   const isDone = item.estado !== 'pendiente';
   return `
@@ -586,17 +597,15 @@ function showItemDetail(id) {
 
     <div class="mb-4">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Categoria</label>
-      <div class="grid grid-cols-3 gap-2">
-        ${['mudanza', 'vender', 'regalar'].map(cat => `
-          <button onclick="updateItemCategory('${item.id}','${cat}')"
-            class="py-2 px-3 rounded-xl text-xs font-semibold border-2 transition ${item.categoria === cat ?
-              (cat === 'mudanza' ? 'border-blue-500 bg-blue-50 text-blue-700' :
-               cat === 'vender' ? 'border-green-500 bg-green-50 text-green-700' :
-               'border-purple-500 bg-purple-50 text-purple-700') :
-              'border-gray-200 text-gray-500 hover:border-gray-300'}">
-            ${{mudanza:'🏠 Mudanza', vender:'💰 Vender', regalar:'🎁 Regalar'}[cat]}
-          </button>
-        `).join('')}
+      <div class="grid grid-cols-4 gap-1.5">
+        ${['mudanza', 'vender', 'regalar', 'indeciso'].map(cat => {
+          const styles = { mudanza: 'border-blue-500 bg-blue-50 text-blue-700', vender: 'border-green-500 bg-green-50 text-green-700', regalar: 'border-purple-500 bg-purple-50 text-purple-700', indeciso: 'border-orange-500 bg-orange-50 text-orange-700' };
+          const labels = { mudanza:'🏠 Mudar', vender:'💰 Vender', regalar:'🎁 Regalar', indeciso:'🤔 Indeciso' };
+          return `<button onclick="updateItemCategory('${item.id}','${cat}')"
+            class="py-2 px-1.5 rounded-xl text-[11px] font-semibold border-2 transition ${item.categoria === cat ? styles[cat] : 'border-gray-200 text-gray-500 hover:border-gray-300'}">
+            ${labels[cat]}
+          </button>`;
+        }).join('')}
       </div>
     </div>
 
