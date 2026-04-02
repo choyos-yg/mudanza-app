@@ -728,42 +728,6 @@ function handleEditPhoto(event) {
 // ========== BULK IMPORT ==========
 async function bulkImport() {
   const importItems = [
-    { nombre: 'Comedor mas sillas', habitacion: 'Salon', categoria: 'indeciso' },
-    { nombre: 'Sillon', habitacion: 'Salon', categoria: 'indeciso' },
-    { nombre: 'Paso juegos Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Conjunto Pickler', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Cocina Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Juguetes Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Punto cafe', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Espejo entrada mas sillon', habitacion: 'Entrada', categoria: 'indeciso' },
-    { nombre: 'Mueble almacenamiento entrada', habitacion: 'Entrada', categoria: 'indeciso' },
-    { nombre: 'Cama Montessori', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Mueble cambiador', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Silla mecedora', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Armario Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Armario Cris', habitacion: 'Dormitorio', categoria: 'indeciso' },
-    { nombre: 'Armarios Laura', habitacion: 'Dormitorio', categoria: 'indeciso' },
-    { nombre: 'Armario cuarto maquillaje', habitacion: 'Cuarto maquillaje', categoria: 'indeciso' },
-    { nombre: 'Mesa graduable Cris', habitacion: 'Despacho', categoria: 'indeciso' },
-    { nombre: 'Mesa escritorio Laura', habitacion: 'Despacho', categoria: 'indeciso' },
-    { nombre: '2 Sillas oficina', habitacion: 'Despacho', categoria: 'indeciso' },
-    { nombre: 'Bibliotecas', habitacion: 'Despacho', categoria: 'indeciso' },
-    { nombre: 'Organizador pared oficina', habitacion: 'Despacho', categoria: 'indeciso' },
-    { nombre: 'Mesa madera cuarto maquillaje', habitacion: 'Cuarto maquillaje', categoria: 'indeciso' },
-    { nombre: 'Cajonera de la tele', habitacion: 'Salon', categoria: 'indeciso' },
-    { nombre: 'Televisor', habitacion: 'Salon', categoria: 'indeciso' },
-    { nombre: 'Cuna Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
-    { nombre: 'Vajilla', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Tuppers', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Ollas', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Robot cocina', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Olla arrocera', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Esterilizador', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Tostadora', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Batidora', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Nutribullet', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Sandwichera', habitacion: 'Cocina', categoria: 'indeciso' },
-    { nombre: 'Aspiradora', habitacion: 'Salon', categoria: 'indeciso' },
     { nombre: 'Lampara sala', habitacion: 'Salon', categoria: 'indeciso' },
     { nombre: 'Lampara Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
     { nombre: 'Lampara cuarto principal', habitacion: 'Dormitorio', categoria: 'indeciso' },
@@ -778,7 +742,7 @@ async function bulkImport() {
     { nombre: 'Trona Stokke', habitacion: 'Cocina', categoria: 'indeciso' },
   ];
 
-  if (!confirm('Se van a importar ' + importItems.length + ' objetos. Continuar?')) return;
+  if (!confirm('Se van a importar ' + importItems.length + ' objetos nuevos. Continuar?')) return;
 
   const btn = document.getElementById('importBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
