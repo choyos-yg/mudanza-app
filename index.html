@@ -742,13 +742,21 @@ async function bulkImport() {
     { nombre: 'Trona Stokke', habitacion: 'Cocina', categoria: 'indeciso' },
   ];
 
-  if (!confirm('Se van a importar ' + importItems.length + ' objetos nuevos. Continuar?')) return;
+  const existingNames = new Set(items.map(i => i.nombre.toLowerCase().trim()));
+  const newItems = importItems.filter(i => !existingNames.has(i.nombre.toLowerCase().trim()));
+
+  if (newItems.length === 0) {
+    alert('Todos los objetos del listado ya existen en el inventario.');
+    return;
+  }
+
+  if (!confirm('Se van a importar ' + newItems.length + ' objetos nuevos (' + (importItems.length - newItems.length) + ' ya existen). Continuar?')) return;
 
   const btn = document.getElementById('importBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
 
   let ok = 0, fail = 0;
-  for (const item of importItems) {
+  for (const item of newItems) {
     try {
       const data = await dbInsert({ ...item, estado: 'pendiente', foto: null, notas: '', precio: null, link: '' });
       items.unshift(data);
