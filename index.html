@@ -56,6 +56,9 @@ tailwind.config = {
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <button id="importBtn" onclick="bulkImport()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100" title="Importar listado">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+      </button>
       <button onclick="exportData()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100" title="Exportar CSV">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
       </button>
@@ -200,6 +203,7 @@ tailwind.config = {
 <!-- Hidden file/camera inputs -->
 <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event)">
 <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handlePhoto(event)">
+<input type="file" id="editPhotoInput" accept="image/*" class="hidden" onchange="handleEditPhoto(event)">
 
 <!-- FAB Buttons -->
 <div class="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
@@ -228,7 +232,8 @@ let currentFilter = 'todos';
 let currentStatusFilter = 'todos';
 let pendingPhoto = null;
 let selectedCategory = 'mudanza';
-const defaultRooms = ['Salon', 'Cocina', 'Dormitorio', 'Bano', 'Despacho', 'Terraza', 'Trastero', 'Garaje'];
+let editingPhotoItemId = null;
+const defaultRooms = ['Salon', 'Cocina', 'Dormitorio', 'Bano', 'Despacho', 'Terraza', 'Trastero', 'Garaje', 'Habitacion Elena', 'Entrada', 'Cuarto maquillaje'];
 
 // ========== API SYNC ==========
 async function loadItems() {
@@ -580,7 +585,14 @@ function showItemDetail(id) {
   document.getElementById('itemModalContent').innerHTML = `
     <div class="flex items-start justify-between mb-4">
       <div class="flex items-center gap-3">
-        ${item.foto ? `<img src="${item.foto}" class="w-16 h-16 rounded-xl object-cover">` : ''}
+        <div class="relative flex-shrink-0 cursor-pointer group" onclick="editingPhotoItemId='${item.id}'; document.getElementById('editPhotoInput').click()">
+          ${item.foto
+            ? `<img src="${item.foto}" class="w-16 h-16 rounded-xl object-cover">`
+            : `<div class="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center text-2xl">${{mudanza:'🏠',vender:'💰',regalar:'🎁',indeciso:'🤔'}[item.categoria]}</div>`}
+          <div class="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          </div>
+        </div>
         <div class="flex-1 min-w-0">
           <input id="editNombre" type="text" value="${(item.nombre||'').replace(/"/g, '&quot;')}"
             class="font-bold text-gray-900 w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none pb-0.5 text-sm"
@@ -680,6 +692,98 @@ function exportData() {
   a.download = `inventario-mudanza-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ========== EDIT PHOTO ==========
+function handleEditPhoto(event) {
+  const file = event.target.files[0];
+  if (!file || !editingPhotoItemId) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const maxSize = 300;
+      const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      try {
+        await dbUpdate(editingPhotoItemId, { foto: dataUrl });
+        const item = items.find(i => i.id === editingPhotoItemId);
+        if (item) item.foto = dataUrl;
+        renderItems();
+        showItemDetail(editingPhotoItemId);
+      } catch(e) { alert('Error al actualizar foto: ' + e.message); }
+      editingPhotoItemId = null;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+// ========== BULK IMPORT ==========
+async function bulkImport() {
+  const importItems = [
+    { nombre: 'Comedor mas sillas', habitacion: 'Salon', categoria: 'indeciso' },
+    { nombre: 'Sillon', habitacion: 'Salon', categoria: 'indeciso' },
+    { nombre: 'Paso juegos Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Conjunto Pickler', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Cocina Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Juguetes Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Punto cafe', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Espejo entrada mas sillon', habitacion: 'Entrada', categoria: 'indeciso' },
+    { nombre: 'Mueble almacenamiento entrada', habitacion: 'Entrada', categoria: 'indeciso' },
+    { nombre: 'Cama Montessori', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Mueble cambiador', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Silla mecedora', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Armario Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Armario Cris', habitacion: 'Dormitorio', categoria: 'indeciso' },
+    { nombre: 'Armarios Laura', habitacion: 'Dormitorio', categoria: 'indeciso' },
+    { nombre: 'Armario cuarto maquillaje', habitacion: 'Cuarto maquillaje', categoria: 'indeciso' },
+    { nombre: 'Mesa graduable Cris', habitacion: 'Despacho', categoria: 'indeciso' },
+    { nombre: 'Mesa escritorio Laura', habitacion: 'Despacho', categoria: 'indeciso' },
+    { nombre: '2 Sillas oficina', habitacion: 'Despacho', categoria: 'indeciso' },
+    { nombre: 'Bibliotecas', habitacion: 'Despacho', categoria: 'indeciso' },
+    { nombre: 'Organizador pared oficina', habitacion: 'Despacho', categoria: 'indeciso' },
+    { nombre: 'Mesa madera cuarto maquillaje', habitacion: 'Cuarto maquillaje', categoria: 'indeciso' },
+    { nombre: 'Cajonera de la tele', habitacion: 'Salon', categoria: 'indeciso' },
+    { nombre: 'Televisor', habitacion: 'Salon', categoria: 'indeciso' },
+    { nombre: 'Cuna Elena', habitacion: 'Habitacion Elena', categoria: 'indeciso' },
+    { nombre: 'Vajilla', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Tuppers', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Ollas', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Robot cocina', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Olla arrocera', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Esterilizador', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Tostadora', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Batidora', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Nutribullet', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Sandwichera', habitacion: 'Cocina', categoria: 'indeciso' },
+    { nombre: 'Aspiradora', habitacion: 'Salon', categoria: 'indeciso' },
+  ];
+
+  if (!confirm('Se van a importar ' + importItems.length + ' objetos. Continuar?')) return;
+
+  const btn = document.getElementById('importBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
+
+  let ok = 0, fail = 0;
+  for (const item of importItems) {
+    try {
+      const data = await dbInsert({ ...item, estado: 'pendiente', foto: null, notas: '', precio: null, link: '' });
+      items.unshift(data);
+      ok++;
+    } catch(e) { fail++; }
+  }
+
+  renderItems();
+  renderStats();
+  if (btn) { btn.disabled = false; btn.textContent = 'Importar listado'; }
+  alert('Importados: ' + ok + (fail ? ' | Errores: ' + fail : ''));
 }
 
 // ========== INIT ==========
