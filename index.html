@@ -40,6 +40,10 @@ tailwind.config = {
   .sync-dot { width: 8px; height: 8px; border-radius: 50%; }
   .sync-dot.online { background: #22c55e; }
   .sync-dot.offline { background: #ef4444; }
+  .kanban-col { min-height: 200px; }
+  .task-status-pendiente { border-left: 3px solid #f59e0b; }
+  .task-status-en_progreso { border-left: 3px solid #3b82f6; }
+  .task-status-hecho { border-left: 3px solid #22c55e; }
 </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -55,7 +59,7 @@ tailwind.config = {
         <span class="text-[10px] text-gray-400" id="syncText">Conectando...</span>
       </div>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2" id="headerActions">
       <button id="importBtn" onclick="bulkImport()" class="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100" title="Importar listado">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
       </button>
@@ -69,55 +73,134 @@ tailwind.config = {
   </div>
 </header>
 
-<!-- Stats Bar -->
-<div class="max-w-2xl mx-auto px-4 py-3">
-  <div id="statsBar" class="grid grid-cols-5 gap-1.5 text-center"></div>
+<!-- Main Navigation Tabs -->
+<div class="max-w-2xl mx-auto px-4 pt-3">
+  <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-3">
+    <button onclick="switchTab('inventario')" data-maintab="inventario" class="main-tab flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5">
+      📦 Inventario
+    </button>
+    <button onclick="switchTab('tareas')" data-maintab="tareas" class="main-tab flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5">
+      ✅ Tareas
+    </button>
+  </div>
 </div>
 
-<!-- Progress Bar -->
-<div class="max-w-2xl mx-auto px-4 pb-2">
-  <div id="progressBar" class="hidden">
-    <div class="flex items-center justify-between mb-1">
-      <span class="text-xs font-medium text-gray-500">Progreso</span>
-      <span id="progressPct" class="text-xs font-bold text-gray-700">0%</span>
+<!-- ==================== INVENTARIO SECTION ==================== -->
+<div id="inventarioSection">
+  <!-- Stats Bar -->
+  <div class="max-w-2xl mx-auto px-4 py-2">
+    <div id="statsBar" class="grid grid-cols-5 gap-1.5 text-center"></div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="max-w-2xl mx-auto px-4 pb-2">
+    <div id="progressBar" class="hidden">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-medium text-gray-500">Progreso</span>
+        <span id="progressPct" class="text-xs font-bold text-gray-700">0%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-2">
+        <div id="progressFill" class="bg-gradient-to-r from-blue-500 via-green-500 to-purple-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
     </div>
-    <div class="w-full bg-gray-200 rounded-full h-2">
-      <div id="progressFill" class="bg-gradient-to-r from-blue-500 via-green-500 to-purple-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="max-w-2xl mx-auto px-4 pb-2">
+    <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
+      <button onclick="setFilter('todos')" data-filter="todos" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">Todos</button>
+      <button onclick="setFilter('mudanza')" data-filter="mudanza" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🏠 Mudar</button>
+      <button onclick="setFilter('vender')" data-filter="vender" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">💰 Vender</button>
+      <button onclick="setFilter('regalar')" data-filter="regalar" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🎁 Regalar</button>
+      <button onclick="setFilter('indeciso')" data-filter="indeciso" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🤔 Indeciso</button>
+    </div>
+  </div>
+
+  <!-- Status Filter -->
+  <div class="max-w-2xl mx-auto px-4 pb-3">
+    <div class="flex gap-1 flex-wrap">
+      <button onclick="setStatusFilter('todos')" data-status="todos" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Todos</button>
+      <button onclick="setStatusFilter('pendiente')" data-status="pendiente" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Pendiente</button>
+      <button onclick="setStatusFilter('vendido')" data-status="vendido" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Vendido</button>
+      <button onclick="setStatusFilter('movido')" data-status="movido" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Movido</button>
+      <button onclick="setStatusFilter('regalado')" data-status="regalado" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Regalado</button>
+    </div>
+  </div>
+
+  <!-- Items List -->
+  <div class="max-w-2xl mx-auto px-4 pb-32">
+    <div id="itemsList" class="space-y-2"></div>
+    <div id="emptyState" class="hidden text-center py-16">
+      <div class="text-6xl mb-4">📸</div>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Sin objetos todavia</h3>
+      <p class="text-sm text-gray-500">Haz una foto o pulsa + para anadir objetos<br>a tu inventario de mudanza</p>
     </div>
   </div>
 </div>
 
-<!-- Filter Tabs -->
-<div class="max-w-2xl mx-auto px-4 pb-2">
-  <div class="flex gap-1 bg-gray-100 rounded-xl p-1">
-    <button onclick="setFilter('todos')" data-filter="todos" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">Todos</button>
-    <button onclick="setFilter('mudanza')" data-filter="mudanza" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🏠 Mudar</button>
-    <button onclick="setFilter('vender')" data-filter="vender" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">💰 Vender</button>
-    <button onclick="setFilter('regalar')" data-filter="regalar" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🎁 Regalar</button>
-    <button onclick="setFilter('indeciso')" data-filter="indeciso" class="filter-tab flex-1 py-2 px-2 rounded-lg text-[11px] font-semibold transition">🤔 Indeciso</button>
+<!-- ==================== TAREAS SECTION ==================== -->
+<div id="tareasSection" class="hidden">
+  <!-- Tasks Stats -->
+  <div class="max-w-2xl mx-auto px-4 py-2">
+    <div id="tasksStatsBar" class="grid grid-cols-4 gap-1.5 text-center"></div>
+  </div>
+
+  <!-- Tasks View Toggle -->
+  <div class="max-w-2xl mx-auto px-4 pb-3">
+    <div class="flex items-center justify-between">
+      <div class="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+        <button onclick="setTaskView('lista')" data-taskview="lista" class="taskview-tab px-3 py-1.5 rounded-md text-xs font-semibold transition">Lista</button>
+        <button onclick="setTaskView('kanban')" data-taskview="kanban" class="taskview-tab px-3 py-1.5 rounded-md text-xs font-semibold transition">Kanban</button>
+      </div>
+      <button onclick="showAddTask()" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        Nueva tarea
+      </button>
+    </div>
+  </div>
+
+  <!-- Task List View -->
+  <div id="taskListView" class="max-w-2xl mx-auto px-4 pb-32">
+    <div id="tasksList" class="space-y-2"></div>
+    <div id="tasksEmptyState" class="hidden text-center py-16">
+      <div class="text-6xl mb-4">✅</div>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Sin tareas</h3>
+      <p class="text-sm text-gray-500">Pulsa "Nueva tarea" para empezar</p>
+    </div>
+  </div>
+
+  <!-- Task Kanban View -->
+  <div id="taskKanbanView" class="hidden max-w-4xl mx-auto px-4 pb-32">
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+          <span class="text-xs font-semibold text-gray-500 uppercase">Pendiente</span>
+          <span id="kanbanCountPendiente" class="text-xs text-gray-400"></span>
+        </div>
+        <div id="kanbanPendiente" class="kanban-col space-y-2"></div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+          <span class="text-xs font-semibold text-gray-500 uppercase">En progreso</span>
+          <span id="kanbanCountEn_progreso" class="text-xs text-gray-400"></span>
+        </div>
+        <div id="kanbanEn_progreso" class="kanban-col space-y-2"></div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-2 h-2 rounded-full bg-green-500"></div>
+          <span class="text-xs font-semibold text-gray-500 uppercase">Hecho</span>
+          <span id="kanbanCountHecho" class="text-xs text-gray-400"></span>
+        </div>
+        <div id="kanbanHecho" class="kanban-col space-y-2"></div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- Status Filter -->
-<div class="max-w-2xl mx-auto px-4 pb-3">
-  <div class="flex gap-1 flex-wrap">
-    <button onclick="setStatusFilter('todos')" data-status="todos" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Todos</button>
-    <button onclick="setStatusFilter('pendiente')" data-status="pendiente" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Pendiente</button>
-    <button onclick="setStatusFilter('vendido')" data-status="vendido" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Vendido</button>
-    <button onclick="setStatusFilter('movido')" data-status="movido" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Movido</button>
-    <button onclick="setStatusFilter('regalado')" data-status="regalado" class="status-tab px-3 py-1 rounded-full text-xs font-medium transition border">Regalado</button>
-  </div>
-</div>
-
-<!-- Items List -->
-<div class="max-w-2xl mx-auto px-4 pb-32">
-  <div id="itemsList" class="space-y-2"></div>
-  <div id="emptyState" class="hidden text-center py-16">
-    <div class="text-6xl mb-4">📸</div>
-    <h3 class="text-lg font-semibold text-gray-700 mb-2">Sin objetos todavia</h3>
-    <p class="text-sm text-gray-500">Haz una foto o pulsa + para anadir objetos<br>a tu inventario de mudanza</p>
-  </div>
-</div>
+<!-- ==================== MODALS ==================== -->
 
 <!-- Add Item Modal -->
 <div id="addModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
@@ -200,13 +283,56 @@ tailwind.config = {
   <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[80vh] overflow-y-auto p-6" id="itemModalContent"></div>
 </div>
 
+<!-- Add Task Modal -->
+<div id="addTaskModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
+  <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-gray-900">Nueva tarea</h2>
+      <button onclick="closeAddTaskModal()" class="text-gray-400 hover:text-gray-600 p-1">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Titulo</label>
+      <input id="taskTitle" type="text" placeholder="Ej: Contratar empresa de mudanza..."
+        class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Responsable</label>
+      <div class="flex flex-wrap gap-2 mb-2" id="responsableButtons"></div>
+      <input id="taskResponsable" type="text" placeholder="O escribe un nombre..."
+        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <div class="mb-5">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Notas (opcional)</label>
+      <input id="taskNotas" type="text" placeholder="Detalles, telefono, fecha..."
+        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
+    <button onclick="submitTask()" class="w-full py-3.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition text-sm">
+      Crear tarea
+    </button>
+    <button onclick="submitTaskAndAnother()" class="w-full py-2.5 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-xl transition mt-2">
+      Crear y anadir otra
+    </button>
+  </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div id="taskModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
+  <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[80vh] overflow-y-auto p-6" id="taskModalContent"></div>
+</div>
+
 <!-- Hidden file/camera inputs -->
 <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event)">
 <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handlePhoto(event)">
 <input type="file" id="editPhotoInput" accept="image/*" class="hidden" onchange="handleEditPhoto(event)">
 
-<!-- FAB Buttons -->
-<div class="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
+<!-- FAB Buttons (only visible on inventario tab) -->
+<div id="inventarioFAB" class="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
   <button onclick="document.getElementById('fileInput').click()" class="w-12 h-12 bg-white text-gray-600 rounded-xl shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all" title="Subir imagen">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
   </button>
@@ -228,29 +354,77 @@ const HEADERS = {
 
 // ========== STATE ==========
 let items = [];
+let tasks = [];
+let currentTab = 'inventario';
 let currentFilter = 'todos';
 let currentStatusFilter = 'todos';
+let currentTaskView = 'lista';
 let pendingPhoto = null;
 let selectedCategory = 'mudanza';
 let editingPhotoItemId = null;
+let lastItemsHash = '';
+let lastTasksHash = '';
 const defaultRooms = ['Salon', 'Cocina', 'Dormitorio', 'Bano', 'Despacho', 'Terraza', 'Trastero', 'Garaje', 'Habitacion Elena', 'Entrada', 'Cuarto maquillaje'];
+const defaultResponsables = ['Cris', 'Laura'];
+
+// ========== MAIN TAB NAVIGATION ==========
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.main-tab').forEach(t => {
+    t.classList.toggle('bg-white', t.dataset.maintab === tab);
+    t.classList.toggle('shadow-sm', t.dataset.maintab === tab);
+    t.classList.toggle('text-gray-900', t.dataset.maintab === tab);
+    t.classList.toggle('text-gray-500', t.dataset.maintab !== tab);
+  });
+  document.getElementById('inventarioSection').classList.toggle('hidden', tab !== 'inventario');
+  document.getElementById('tareasSection').classList.toggle('hidden', tab !== 'tareas');
+  document.getElementById('inventarioFAB').classList.toggle('hidden', tab !== 'inventario');
+}
 
 // ========== API SYNC ==========
+function hashData(data) {
+  return JSON.stringify(data.map(d => ({ id: d.id, ...Object.fromEntries(Object.entries(d).filter(([k]) => k !== 'foto').sort()) })));
+}
+
 async function loadItems() {
   try {
     const res = await fetch(API + '/items?select=*&order=created_at.desc', { headers: HEADERS });
     if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-    items = await res.json();
+    const newItems = await res.json();
+    const newHash = hashData(newItems);
+    if (newHash !== lastItemsHash) {
+      items = newItems;
+      lastItemsHash = newHash;
+      renderItems();
+      renderStats();
+    }
     setSyncStatus(true);
-    renderItems();
-    renderStats();
   } catch (e) {
     setSyncStatus(false, e.message);
   }
 }
 
-async function dbInsert(item) {
-  const res = await fetch(API + '/items', {
+async function loadTasks() {
+  try {
+    const res = await fetch(API + '/tasks?select=*&order=created_at.desc', { headers: HEADERS });
+    if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+    const newTasks = await res.json();
+    const newHash = hashData(newTasks);
+    if (newHash !== lastTasksHash) {
+      tasks = newTasks;
+      lastTasksHash = newHash;
+      renderTasks();
+      renderTasksStats();
+    }
+  } catch (e) { /* tasks table might not exist yet */ }
+}
+
+async function loadAll() {
+  await Promise.all([loadItems(), loadTasks()]);
+}
+
+async function dbInsert(table, item) {
+  const res = await fetch(API + '/' + table, {
     method: 'POST', headers: HEADERS, body: JSON.stringify(item)
   });
   if (!res.ok) throw new Error('Error al guardar');
@@ -258,24 +432,24 @@ async function dbInsert(item) {
   return data[0];
 }
 
-async function dbUpdate(id, fields) {
-  const res = await fetch(API + '/items?id=eq.' + id, {
+async function dbUpdate(table, id, fields) {
+  const res = await fetch(API + '/' + table + '?id=eq.' + id, {
     method: 'PATCH', headers: HEADERS, body: JSON.stringify(fields)
   });
   if (!res.ok) throw new Error('Error al actualizar');
 }
 
-async function dbDelete(id) {
-  const res = await fetch(API + '/items?id=eq.' + id, {
+async function dbDelete(table, id) {
+  const res = await fetch(API + '/' + table + '?id=eq.' + id, {
     method: 'DELETE', headers: HEADERS
   });
   if (!res.ok) throw new Error('Error al eliminar');
 }
 
-// Polling cada 3s para sync entre dispositivos
+// Polling cada 5s (was 3s) - only re-renders if data changed
 let pollTimer = null;
 function startPolling() {
-  pollTimer = setInterval(loadItems, 3000);
+  pollTimer = setInterval(loadAll, 5000);
 }
 
 function setSyncStatus(online, detail) {
@@ -309,7 +483,7 @@ function handlePhoto(event) {
   event.target.value = '';
 }
 
-// ========== ADD MODAL ==========
+// ========== ADD ITEM MODAL ==========
 function showAddModal(withPhoto) {
   const preview = document.getElementById('addPhotoPreview');
   const img = document.getElementById('addPhotoImg');
@@ -351,7 +525,6 @@ function selectCategory(cat) {
     const colors = { mudanza: 'ring-blue-500 border-blue-500', vender: 'ring-green-500 border-green-500', regalar: 'ring-purple-500 border-purple-500', indeciso: 'ring-orange-500 border-orange-500' };
     colors[btn.dataset.cat].split(' ').forEach(c => btn.classList.toggle(c, isSel && btn.dataset.cat === cat));
   });
-  // Show precio/link only for vender
   const show = cat === 'vender';
   const precioWrap = document.getElementById('addPrecioWrap');
   const linkWrap = document.getElementById('addLinkWrap');
@@ -375,25 +548,19 @@ async function createItem() {
     setTimeout(() => document.getElementById('addName').classList.remove('ring-2', 'ring-red-500'), 1500);
     return null;
   }
-
   const room = document.getElementById('addRoom').value.trim() || 'Sin asignar';
   const notes = document.getElementById('addNotes').value.trim();
-
   const precioVal = document.getElementById('addPrecio').value;
   const link = document.getElementById('addLink').value.trim();
 
   try {
-    const data = await dbInsert({
-      nombre: name,
-      categoria: selectedCategory,
-      habitacion: room,
-      notas: notes,
-      estado: 'pendiente',
-      foto: pendingPhoto || null,
-      precio: precioVal ? parseFloat(precioVal) : null,
-      link: link || ''
+    const data = await dbInsert('items', {
+      nombre: name, categoria: selectedCategory, habitacion: room,
+      notas: notes, estado: 'pendiente', foto: pendingPhoto || null,
+      precio: precioVal ? parseFloat(precioVal) : null, link: link || ''
     });
     items.unshift(data);
+    lastItemsHash = hashData(items);
     renderItems();
     renderStats();
     return data;
@@ -421,8 +588,9 @@ async function submitAndAnother() {
 async function deleteItem(id) {
   if (!confirm('Eliminar este objeto?')) return;
   try {
-    await dbDelete(id);
+    await dbDelete('items', id);
     items = items.filter(i => i.id !== id);
+    lastItemsHash = hashData(items);
     renderItems();
     renderStats();
     document.getElementById('itemModal').classList.add('hidden');
@@ -431,9 +599,10 @@ async function deleteItem(id) {
 
 async function updateItemStatus(id, status) {
   try {
-    await dbUpdate(id, { estado: status });
+    await dbUpdate('items', id, { estado: status });
     const item = items.find(i => i.id === id);
     if (item) item.estado = status;
+    lastItemsHash = hashData(items);
     renderItems();
     renderStats();
     showItemDetail(id);
@@ -442,12 +611,25 @@ async function updateItemStatus(id, status) {
 
 async function updateItemCategory(id, category) {
   try {
-    await dbUpdate(id, { categoria: category });
+    await dbUpdate('items', id, { categoria: category });
     const item = items.find(i => i.id === id);
     if (item) item.categoria = category;
+    lastItemsHash = hashData(items);
     renderItems();
     renderStats();
     showItemDetail(id);
+  } catch(e) { alert(e.message); }
+}
+
+async function updateItemField(id, field, value) {
+  try {
+    await dbUpdate('items', id, { [field]: value });
+    const item = items.find(i => i.id === id);
+    if (item) item[field] = value;
+    lastItemsHash = hashData(items);
+    renderItems();
+    renderStats();
+    if (field === 'categoria') showItemDetail(id);
   } catch(e) { alert(e.message); }
 }
 
@@ -475,13 +657,12 @@ function setStatusFilter(status) {
   renderItems();
 }
 
-// ========== RENDERING ==========
+// ========== INVENTARIO RENDERING ==========
 function renderStats() {
   const total = items.length;
   const pendientes = items.filter(i => i.estado === 'pendiente').length;
   const completados = total - pendientes;
   const pct = total > 0 ? Math.round((completados / total) * 100) : 0;
-
   const catCounts = { mudanza: 0, vender: 0, regalar: 0, indeciso: 0 };
   items.forEach(i => catCounts[i.categoria]++);
 
@@ -621,17 +802,17 @@ function showItemDetail(id) {
       </div>
     </div>
 
-    <div class="mb-4" style="${showVenderFields ? '' : 'display:none'}" id="detailPrecioWrap">
+    <div class="mb-4" style="${showVenderFields ? '' : 'display:none'}">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Precio (EUR)</label>
       <input type="number" step="0.01" min="0" value="${item.precio || ''}" placeholder="Ej: 50"
         class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         onchange="updateItemField('${item.id}','precio',this.value ? parseFloat(this.value) : null)">
     </div>
 
-    <div class="mb-4" style="${showVenderFields ? '' : 'display:none'}" id="detailLinkWrap">
+    <div class="mb-4" style="${showVenderFields ? '' : 'display:none'}">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Link</label>
       <div class="flex gap-2">
-        <input id="editLink" type="url" value="${(item.link||'').replace(/"/g, '&quot;')}" placeholder="https://es.wallapop.com/..."
+        <input type="url" value="${(item.link||'').replace(/"/g, '&quot;')}" placeholder="https://es.wallapop.com/..."
           class="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           onchange="updateItemField('${item.id}','link',this.value)">
         ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener" class="px-3 py-2 bg-blue-100 text-blue-700 rounded-xl text-sm font-medium hover:bg-blue-200 flex-shrink-0 flex items-center">Abrir</a>` : ''}
@@ -665,16 +846,284 @@ function showItemDetail(id) {
   document.getElementById('itemModal').classList.remove('hidden');
 }
 
-async function updateItemField(id, field, value) {
+// ========== TASKS ==========
+function showAddTask() {
+  document.getElementById('taskTitle').value = '';
+  document.getElementById('taskResponsable').value = '';
+  document.getElementById('taskNotas').value = '';
+  renderResponsableButtons();
+  document.getElementById('addTaskModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('taskTitle').focus(), 100);
+}
+
+function closeAddTaskModal() {
+  document.getElementById('addTaskModal').classList.add('hidden');
+}
+
+function renderResponsableButtons() {
+  const usedResp = [...new Set(tasks.map(t => t.responsable).filter(Boolean))];
+  const allResp = [...new Set([...defaultResponsables, ...usedResp])];
+  document.getElementById('responsableButtons').innerHTML = allResp.map(r => `
+    <button type="button" onclick="document.getElementById('taskResponsable').value='${r}'"
+      class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition">${r}</button>
+  `).join('');
+}
+
+async function createTask() {
+  const titulo = document.getElementById('taskTitle').value.trim();
+  if (!titulo) {
+    document.getElementById('taskTitle').classList.add('ring-2', 'ring-red-500');
+    setTimeout(() => document.getElementById('taskTitle').classList.remove('ring-2', 'ring-red-500'), 1500);
+    return null;
+  }
+  const responsable = document.getElementById('taskResponsable').value.trim();
+  const notas = document.getElementById('taskNotas').value.trim();
+
   try {
-    await dbUpdate(id, { [field]: value });
-    const item = items.find(i => i.id === id);
-    if (item) item[field] = value;
-    renderItems();
-    renderStats();
-    // If category changed to/from vender, re-render detail to show/hide fields
-    if (field === 'categoria') showItemDetail(id);
+    const data = await dbInsert('tasks', {
+      titulo, estado: 'pendiente', responsable, notas
+    });
+    tasks.unshift(data);
+    lastTasksHash = hashData(tasks);
+    renderTasks();
+    renderTasksStats();
+    return data;
+  } catch(e) {
+    alert('Error al guardar tarea: ' + e.message);
+    return null;
+  }
+}
+
+async function submitTask() {
+  const t = await createTask();
+  if (t) closeAddTaskModal();
+}
+
+async function submitTaskAndAnother() {
+  const t = await createTask();
+  if (t) {
+    document.getElementById('taskTitle').value = '';
+    document.getElementById('taskNotas').value = '';
+    setTimeout(() => document.getElementById('taskTitle').focus(), 100);
+  }
+}
+
+async function updateTaskField(id, field, value) {
+  try {
+    await dbUpdate('tasks', id, { [field]: value });
+    const task = tasks.find(t => t.id === id);
+    if (task) task[field] = value;
+    lastTasksHash = hashData(tasks);
+    renderTasks();
+    renderTasksStats();
+    if (field === 'estado') showTaskDetail(id);
   } catch(e) { alert(e.message); }
+}
+
+async function deleteTask(id) {
+  if (!confirm('Eliminar esta tarea?')) return;
+  try {
+    await dbDelete('tasks', id);
+    tasks = tasks.filter(t => t.id !== id);
+    lastTasksHash = hashData(tasks);
+    renderTasks();
+    renderTasksStats();
+    document.getElementById('taskModal').classList.add('hidden');
+  } catch(e) { alert(e.message); }
+}
+
+function setTaskView(view) {
+  currentTaskView = view;
+  document.querySelectorAll('.taskview-tab').forEach(t => {
+    t.classList.toggle('bg-white', t.dataset.taskview === view);
+    t.classList.toggle('shadow-sm', t.dataset.taskview === view);
+    t.classList.toggle('text-gray-900', t.dataset.taskview === view);
+    t.classList.toggle('text-gray-500', t.dataset.taskview !== view);
+  });
+  document.getElementById('taskListView').classList.toggle('hidden', view !== 'lista');
+  document.getElementById('taskKanbanView').classList.toggle('hidden', view !== 'kanban');
+  renderTasks();
+}
+
+// ========== TASKS RENDERING ==========
+function renderTasksStats() {
+  const total = tasks.length;
+  const pend = tasks.filter(t => t.estado === 'pendiente').length;
+  const prog = tasks.filter(t => t.estado === 'en_progreso').length;
+  const done = tasks.filter(t => t.estado === 'hecho').length;
+
+  document.getElementById('tasksStatsBar').innerHTML = `
+    <div class="bg-white rounded-xl p-2 shadow-sm border border-gray-100">
+      <div class="text-lg font-bold text-gray-900">${total}</div>
+      <div class="text-[10px] text-gray-500 font-medium">Total</div>
+    </div>
+    <div class="bg-amber-50 rounded-xl p-2 border border-amber-100">
+      <div class="text-lg font-bold text-amber-700">${pend}</div>
+      <div class="text-[10px] text-amber-600 font-medium">Pendiente</div>
+    </div>
+    <div class="bg-blue-50 rounded-xl p-2 border border-blue-100">
+      <div class="text-lg font-bold text-blue-700">${prog}</div>
+      <div class="text-[10px] text-blue-600 font-medium">En progreso</div>
+    </div>
+    <div class="bg-green-50 rounded-xl p-2 border border-green-100">
+      <div class="text-lg font-bold text-green-700">${done}</div>
+      <div class="text-[10px] text-green-600 font-medium">Hecho</div>
+    </div>
+  `;
+}
+
+function renderTasks() {
+  if (currentTaskView === 'lista') renderTaskList();
+  else renderTaskKanban();
+}
+
+function renderTaskList() {
+  const list = document.getElementById('tasksList');
+  const empty = document.getElementById('tasksEmptyState');
+
+  if (tasks.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  const groups = { pendiente: [], en_progreso: [], hecho: [] };
+  tasks.forEach(t => {
+    if (groups[t.estado]) groups[t.estado].push(t);
+  });
+
+  const statusConfig = {
+    pendiente: { label: 'Pendiente', color: 'amber' },
+    en_progreso: { label: 'En progreso', color: 'blue' },
+    hecho: { label: 'Hecho', color: 'green' }
+  };
+
+  list.innerHTML = Object.entries(groups).filter(([, arr]) => arr.length > 0).map(([estado, taskArr]) => `
+    <div class="fade-in">
+      <div class="flex items-center gap-2 py-2">
+        <div class="w-2 h-2 rounded-full bg-${statusConfig[estado].color}-500"></div>
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">${statusConfig[estado].label}</span>
+        <span class="text-xs text-gray-300">(${taskArr.length})</span>
+        <div class="flex-1 border-t border-gray-100"></div>
+      </div>
+      <div class="space-y-2">
+        ${taskArr.map(renderTaskCard).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTaskCard(task) {
+  const isDone = task.estado === 'hecho';
+  return `
+    <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 task-status-${task.estado} cursor-pointer hover:shadow-md transition active:scale-[0.99] ${isDone ? 'opacity-60' : ''}"
+         onclick="showTaskDetail('${task.id}')">
+      <div class="flex items-center gap-3">
+        <button onclick="event.stopPropagation(); quickToggleTask('${task.id}')"
+          class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${isDone ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-400'}">
+          ${isDone ? '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' : ''}
+        </button>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-sm text-gray-900 ${isDone ? 'line-through' : ''}">${task.titulo}</div>
+          <div class="flex items-center gap-2 mt-1">
+            ${task.responsable ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${task.responsable}</span>` : ''}
+            ${task.notas ? `<span class="text-[10px] text-gray-400 truncate">${task.notas}</span>` : ''}
+          </div>
+        </div>
+        <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+      </div>
+    </div>
+  `;
+}
+
+function renderTaskKanban() {
+  const cols = { pendiente: [], en_progreso: [], hecho: [] };
+  tasks.forEach(t => { if (cols[t.estado]) cols[t.estado].push(t); });
+
+  Object.entries(cols).forEach(([estado, arr]) => {
+    const col = document.getElementById('kanban' + estado.charAt(0).toUpperCase() + estado.slice(1));
+    const count = document.getElementById('kanbanCount' + estado.charAt(0).toUpperCase() + estado.slice(1));
+    if (count) count.textContent = '(' + arr.length + ')';
+    if (col) col.innerHTML = arr.length === 0
+      ? '<div class="text-center py-8 text-gray-300 text-xs">Vacio</div>'
+      : arr.map(t => renderKanbanCard(t)).join('');
+  });
+}
+
+function renderKanbanCard(task) {
+  const isDone = task.estado === 'hecho';
+  const nextState = { pendiente: 'en_progreso', en_progreso: 'hecho', hecho: 'pendiente' };
+  const nextLabel = { pendiente: 'Iniciar', en_progreso: 'Completar', hecho: 'Reabrir' };
+  return `
+    <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-100 ${isDone ? 'opacity-60' : ''}">
+      <div class="font-semibold text-xs text-gray-900 mb-1 cursor-pointer ${isDone ? 'line-through' : ''}" onclick="showTaskDetail('${task.id}')">${task.titulo}</div>
+      ${task.responsable ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">${task.responsable}</span>` : ''}
+      ${task.notas ? `<div class="text-[10px] text-gray-400 mt-1 truncate">${task.notas}</div>` : ''}
+      <button onclick="updateTaskField('${task.id}','estado','${nextState[task.estado]}')"
+        class="mt-2 w-full text-[10px] font-semibold py-1 rounded-md border transition hover:bg-gray-50 text-gray-500 border-gray-200">
+        ${nextLabel[task.estado]} →
+      </button>
+    </div>
+  `;
+}
+
+async function quickToggleTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  const newEstado = task.estado === 'hecho' ? 'pendiente' : 'hecho';
+  await updateTaskField(id, 'estado', newEstado);
+}
+
+function showTaskDetail(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  const statusLabels = { pendiente: 'Pendiente', en_progreso: 'En progreso', hecho: 'Hecho' };
+  const statusColors = { pendiente: 'border-amber-500 bg-amber-50 text-amber-700', en_progreso: 'border-blue-500 bg-blue-50 text-blue-700', hecho: 'border-green-500 bg-green-50 text-green-700' };
+
+  document.getElementById('taskModalContent').innerHTML = `
+    <div class="flex items-start justify-between mb-4">
+      <div class="flex-1 min-w-0">
+        <input type="text" value="${(task.titulo||'').replace(/"/g, '&quot;')}"
+          class="font-bold text-gray-900 w-full bg-transparent border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none pb-0.5 text-lg"
+          onchange="updateTaskField('${task.id}','titulo',this.value)">
+      </div>
+      <button onclick="document.getElementById('taskModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0 ml-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Estado</label>
+      <div class="grid grid-cols-3 gap-2">
+        ${['pendiente', 'en_progreso', 'hecho'].map(st => `
+          <button onclick="updateTaskField('${task.id}','estado','${st}')"
+            class="py-2.5 px-3 rounded-xl text-xs font-semibold border-2 transition ${task.estado === st ? statusColors[st] : 'border-gray-200 text-gray-500 hover:border-gray-300'}">
+            ${statusLabels[st]}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Responsable</label>
+      <input type="text" value="${(task.responsable||'').replace(/"/g, '&quot;')}" placeholder="Quien se encarga..."
+        class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onchange="updateTaskField('${task.id}','responsable',this.value)">
+    </div>
+
+    <div class="mb-6">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Notas</label>
+      <textarea value="" placeholder="Detalles, telefono, fecha..."
+        class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+        onchange="updateTaskField('${task.id}','notas',this.value)">${(task.notas||'').replace(/</g, '&lt;')}</textarea>
+    </div>
+
+    <button onclick="deleteTask('${task.id}')" class="w-full py-2.5 text-red-500 text-sm font-medium hover:bg-red-50 rounded-xl transition">
+      Eliminar tarea
+    </button>
+  `;
+  document.getElementById('taskModal').classList.remove('hidden');
 }
 
 // ========== EXPORT ==========
@@ -711,9 +1160,10 @@ function handleEditPhoto(event) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
       try {
-        await dbUpdate(editingPhotoItemId, { foto: dataUrl });
+        await dbUpdate('items', editingPhotoItemId, { foto: dataUrl });
         const item = items.find(i => i.id === editingPhotoItemId);
         if (item) item.foto = dataUrl;
+        lastItemsHash = hashData(items);
         renderItems();
         showItemDetail(editingPhotoItemId);
       } catch(e) { alert('Error al actualizar foto: ' + e.message); }
@@ -758,12 +1208,13 @@ async function bulkImport() {
   let ok = 0, fail = 0;
   for (const item of newItems) {
     try {
-      const data = await dbInsert({ ...item, estado: 'pendiente', foto: null, notas: '', precio: null, link: '' });
+      const data = await dbInsert('items', { ...item, estado: 'pendiente', foto: null, notas: '', precio: null, link: '' });
       items.unshift(data);
       ok++;
     } catch(e) { fail++; }
   }
 
+  lastItemsHash = hashData(items);
   renderItems();
   renderStats();
   if (btn) { btn.disabled = false; btn.textContent = 'Importar listado'; }
@@ -777,12 +1228,21 @@ document.getElementById('addModal').addEventListener('click', (e) => {
 document.getElementById('itemModal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('itemModal')) document.getElementById('itemModal').classList.add('hidden');
 });
+document.getElementById('addTaskModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('addTaskModal')) closeAddTaskModal();
+});
+document.getElementById('taskModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('taskModal')) document.getElementById('taskModal').classList.add('hidden');
+});
 
+switchTab('inventario');
 setFilter('todos');
 setStatusFilter('todos');
+setTaskView('lista');
 renderStats();
+renderTasksStats();
 
-loadItems();
+loadAll();
 startPolling();
 </script>
 </body>
