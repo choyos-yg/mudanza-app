@@ -306,9 +306,15 @@ tailwind.config = {
         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
 
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Fecha limite</label>
+      <input id="taskFecha" type="date"
+        class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+
     <div class="mb-5">
       <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Notas (opcional)</label>
-      <input id="taskNotas" type="text" placeholder="Detalles, telefono, fecha..."
+      <input id="taskNotas" type="text" placeholder="Detalles, telefono..."
         class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
 
@@ -850,6 +856,7 @@ function showItemDetail(id) {
 function showAddTask() {
   document.getElementById('taskTitle').value = '';
   document.getElementById('taskResponsable').value = '';
+  document.getElementById('taskFecha').value = '';
   document.getElementById('taskNotas').value = '';
   renderResponsableButtons();
   document.getElementById('addTaskModal').classList.remove('hidden');
@@ -877,11 +884,12 @@ async function createTask() {
     return null;
   }
   const responsable = document.getElementById('taskResponsable').value.trim();
+  const fecha = document.getElementById('taskFecha').value || null;
   const notas = document.getElementById('taskNotas').value.trim();
 
   try {
     const data = await dbInsert('tasks', {
-      titulo, estado: 'pendiente', responsable, notas
+      titulo, estado: 'pendiente', responsable, notas, fecha_limite: fecha
     });
     tasks.unshift(data);
     lastTasksHash = hashData(tasks);
@@ -1014,8 +1022,21 @@ function renderTaskList() {
   `).join('');
 }
 
+function formatFecha(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
+function isOverdue(task) {
+  if (!task.fecha_limite || task.estado === 'hecho') return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return new Date(task.fecha_limite + 'T00:00:00') < today;
+}
+
 function renderTaskCard(task) {
   const isDone = task.estado === 'hecho';
+  const overdue = isOverdue(task);
   return `
     <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 task-status-${task.estado} cursor-pointer hover:shadow-md transition active:scale-[0.99] ${isDone ? 'opacity-60' : ''}"
          onclick="showTaskDetail('${task.id}')">
@@ -1026,7 +1047,8 @@ function renderTaskCard(task) {
         </button>
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-sm text-gray-900 ${isDone ? 'line-through' : ''}">${task.titulo}</div>
-          <div class="flex items-center gap-2 mt-1">
+          <div class="flex items-center gap-2 mt-1 flex-wrap">
+            ${task.fecha_limite ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${overdue ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}">📅 ${formatFecha(task.fecha_limite)}</span>` : ''}
             ${task.responsable ? `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">${task.responsable}</span>` : ''}
             ${task.notas ? `<span class="text-[10px] text-gray-400 truncate">${task.notas}</span>` : ''}
           </div>
@@ -1058,7 +1080,10 @@ function renderKanbanCard(task) {
   return `
     <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-100 ${isDone ? 'opacity-60' : ''}">
       <div class="font-semibold text-xs text-gray-900 mb-1 cursor-pointer ${isDone ? 'line-through' : ''}" onclick="showTaskDetail('${task.id}')">${task.titulo}</div>
-      ${task.responsable ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">${task.responsable}</span>` : ''}
+      <div class="flex items-center gap-1 flex-wrap">
+        ${task.fecha_limite ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded ${isOverdue(task) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}">📅 ${formatFecha(task.fecha_limite)}</span>` : ''}
+        ${task.responsable ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">${task.responsable}</span>` : ''}
+      </div>
       ${task.notas ? `<div class="text-[10px] text-gray-400 mt-1 truncate">${task.notas}</div>` : ''}
       <button onclick="updateTaskField('${task.id}','estado','${nextState[task.estado]}')"
         class="mt-2 w-full text-[10px] font-semibold py-1 rounded-md border transition hover:bg-gray-50 text-gray-500 border-gray-200">
@@ -1103,6 +1128,13 @@ function showTaskDetail(id) {
           </button>
         `).join('')}
       </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 block">Fecha limite</label>
+      <input type="date" value="${task.fecha_limite || ''}"
+        class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onchange="updateTaskField('${task.id}','fecha_limite',this.value || null)">
     </div>
 
     <div class="mb-4">
