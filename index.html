@@ -81,7 +81,7 @@ tailwind.config = {
 </header>
 
 <!-- Main Navigation Tabs -->
-<div class="max-w-2xl mx-auto px-4 pt-3">
+<div id="mainTabsContainer" class="max-w-2xl mx-auto px-4 pt-3">
   <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-3">
     <button onclick="switchTab('inventario')" data-maintab="inventario" class="main-tab flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5">
       📦 Inventario
@@ -141,6 +141,33 @@ tailwind.config = {
       <div class="text-6xl mb-4">📸</div>
       <h3 class="text-lg font-semibold text-gray-700 mb-2">Sin objetos todavia</h3>
       <p class="text-sm text-gray-500">Haz una foto o pulsa + para anadir objetos<br>a tu inventario de mudanza</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CATALOGO SECTION (public/shared view) ==================== -->
+<div id="catalogoSection" class="hidden">
+  <div class="max-w-2xl mx-auto px-4 pt-2 pb-4">
+    <div class="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-4 mb-4">
+      <h2 class="font-bold text-gray-900 text-base mb-1">Nos mudamos 📦</h2>
+      <p class="text-xs text-gray-600 leading-relaxed">Estas son las cosas que estamos vendiendo o regalando. Si algo te interesa, avisanos!</p>
+    </div>
+
+    <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-3">
+      <button onclick="setCatalogoFilter('todos')" data-cfilter="todos" class="catalogo-tab flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition">Todo</button>
+      <button onclick="setCatalogoFilter('vender')" data-cfilter="vender" class="catalogo-tab flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition">💰 Venta</button>
+      <button onclick="setCatalogoFilter('regalar')" data-cfilter="regalar" class="catalogo-tab flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition">🎁 Regalo</button>
+    </div>
+
+    <div id="catalogoStats" class="text-xs text-gray-500 mb-3 text-center"></div>
+  </div>
+
+  <div class="max-w-2xl mx-auto px-4 pb-16">
+    <div id="catalogoList" class="grid grid-cols-2 gap-3"></div>
+    <div id="catalogoEmpty" class="hidden text-center py-16">
+      <div class="text-6xl mb-4">🙌</div>
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Ya no queda nada</h3>
+      <p class="text-sm text-gray-500">Todo ha sido vendido o regalado</p>
     </div>
   </div>
 </div>
@@ -337,6 +364,24 @@ tailwind.config = {
 <!-- Task Detail Modal -->
 <div id="taskModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-end sm:items-center justify-center">
   <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[80vh] overflow-y-auto p-6" id="taskModalContent"></div>
+</div>
+
+<!-- Photo Viewer Modal -->
+<div id="photoViewerModal" class="fixed inset-0 bg-black/90 z-[60] hidden flex items-center justify-center p-4" onclick="closePhotoViewer(event)">
+  <div class="relative w-full max-w-3xl" onclick="event.stopPropagation()">
+    <img id="photoViewerImg" class="w-full max-h-[85vh] object-contain rounded-xl">
+    <div id="photoViewerNoPhoto" class="hidden bg-white/10 backdrop-blur rounded-xl p-12 text-center">
+      <div class="text-6xl mb-3">📷</div>
+      <p class="text-white/80 text-sm">Sin foto todavia</p>
+    </div>
+    <button onclick="closePhotoViewer()" class="absolute top-3 right-3 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </button>
+    <button id="photoViewerEditBtn" class="absolute bottom-3 right-3 px-4 py-2.5 bg-white text-gray-900 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg hover:bg-gray-100">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      <span id="photoViewerEditLabel">Cambiar foto</span>
+    </button>
+  </div>
 </div>
 
 <!-- Hidden file/camera inputs -->
@@ -779,13 +824,10 @@ function showItemDetail(id) {
   document.getElementById('itemModalContent').innerHTML = `
     <div class="flex items-start justify-between mb-4">
       <div class="flex items-center gap-3">
-        <div class="relative flex-shrink-0 cursor-pointer group" onclick="editingPhotoItemId='${item.id}'; document.getElementById('editPhotoInput').click()">
+        <div class="relative flex-shrink-0 cursor-pointer" onclick="openPhotoViewer('${item.id}')">
           ${item.foto
             ? `<img src="${item.foto}" class="w-16 h-16 rounded-xl object-cover">`
             : `<div class="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center text-2xl">${{mudanza:'🏠',vender:'💰',regalar:'🎁',indeciso:'🤔'}[item.categoria]}</div>`}
-          <div class="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-          </div>
         </div>
         <div class="flex-1 min-w-0">
           <input id="editNombre" type="text" value="${(item.nombre||'').replace(/"/g, '&quot;')}"
@@ -1182,10 +1224,44 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+// ========== PHOTO VIEWER ==========
+function openPhotoViewer(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  editingPhotoItemId = id;
+  const imgEl = document.getElementById('photoViewerImg');
+  const noPhotoEl = document.getElementById('photoViewerNoPhoto');
+  const editBtn = document.getElementById('photoViewerEditBtn');
+  const editLabel = document.getElementById('photoViewerEditLabel');
+  if (item.foto) {
+    imgEl.src = item.foto;
+    imgEl.classList.remove('hidden');
+    noPhotoEl.classList.add('hidden');
+    editLabel.textContent = 'Cambiar foto';
+  } else {
+    imgEl.classList.add('hidden');
+    noPhotoEl.classList.remove('hidden');
+    editLabel.textContent = 'Anadir foto';
+  }
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById('editPhotoInput').click();
+  };
+  editBtn.style.display = '';
+  document.getElementById('photoViewerModal').classList.remove('hidden');
+}
+
+function closePhotoViewer(event) {
+  if (event && event.target.closest('#photoViewerImg, #photoViewerEditBtn, #photoViewerNoPhoto')) return;
+  document.getElementById('photoViewerModal').classList.add('hidden');
+  editingPhotoItemId = null;
+}
+
 // ========== EDIT PHOTO ==========
 function handleEditPhoto(event) {
   const file = event.target.files[0];
   if (!file || !editingPhotoItemId) return;
+  const targetId = editingPhotoItemId;
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
@@ -1199,14 +1275,24 @@ function handleEditPhoto(event) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
       try {
-        await dbUpdate('items', editingPhotoItemId, { foto: dataUrl });
-        const item = items.find(i => i.id === editingPhotoItemId);
+        await dbUpdate('items', targetId, { foto: dataUrl });
+        const item = items.find(i => i.id === targetId);
         if (item) item.foto = dataUrl;
         lastItemsHash = hashData(items);
         renderItems();
-        showItemDetail(editingPhotoItemId);
+        // Refresh viewer if open
+        const viewer = document.getElementById('photoViewerModal');
+        if (!viewer.classList.contains('hidden')) {
+          document.getElementById('photoViewerImg').src = dataUrl;
+          document.getElementById('photoViewerImg').classList.remove('hidden');
+          document.getElementById('photoViewerNoPhoto').classList.add('hidden');
+          document.getElementById('photoViewerEditLabel').textContent = 'Cambiar foto';
+        }
+        // Refresh detail modal
+        if (!document.getElementById('itemModal').classList.contains('hidden')) {
+          showItemDetail(targetId);
+        }
       } catch(e) { alert('Error al actualizar foto: ' + e.message); }
-      editingPhotoItemId = null;
     };
     img.src = e.target.result;
   };
@@ -1260,6 +1346,91 @@ async function bulkImport() {
   alert('Importados: ' + ok + (fail ? ' | Errores: ' + fail : ''));
 }
 
+// ========== CATALOGO (shared/public view) ==========
+let isCatalogMode = false;
+let catalogoFilter = 'todos';
+
+function setCatalogoFilter(f) {
+  catalogoFilter = f;
+  document.querySelectorAll('.catalogo-tab').forEach(t => {
+    t.classList.toggle('bg-white', t.dataset.cfilter === f);
+    t.classList.toggle('shadow-sm', t.dataset.cfilter === f);
+    t.classList.toggle('text-gray-900', t.dataset.cfilter === f);
+    t.classList.toggle('text-gray-500', t.dataset.cfilter !== f);
+  });
+  renderCatalogo();
+}
+
+function renderCatalogo() {
+  let filtered = items.filter(i => (i.categoria === 'vender' || i.categoria === 'regalar') && i.estado === 'pendiente');
+  if (catalogoFilter !== 'todos') filtered = filtered.filter(i => i.categoria === catalogoFilter);
+
+  const list = document.getElementById('catalogoList');
+  const empty = document.getElementById('catalogoEmpty');
+  const stats = document.getElementById('catalogoStats');
+
+  const venderCount = items.filter(i => i.categoria === 'vender' && i.estado === 'pendiente').length;
+  const regalarCount = items.filter(i => i.categoria === 'regalar' && i.estado === 'pendiente').length;
+  stats.textContent = `${venderCount} en venta · ${regalarCount} para regalar`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  list.innerHTML = filtered.map(item => {
+    const catEmoji = item.categoria === 'vender' ? '💰' : '🎁';
+    const catLabel = item.categoria === 'vender' ? 'En venta' : 'Se regala';
+    const catColor = item.categoria === 'vender' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700';
+    return `
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div class="relative aspect-square bg-gray-100 cursor-pointer" onclick="openCatalogoPhoto('${item.foto ? item.id : ''}')">
+          ${item.foto
+            ? `<img src="${item.foto}" class="w-full h-full object-cover">`
+            : `<div class="w-full h-full flex items-center justify-center text-5xl">${catEmoji}</div>`}
+          <span class="absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full ${catColor}">${catEmoji} ${catLabel}</span>
+        </div>
+        <div class="p-3 flex-1 flex flex-col">
+          <div class="font-semibold text-sm text-gray-900 mb-1">${item.nombre}</div>
+          ${item.habitacion && item.habitacion !== 'Sin asignar' ? `<div class="text-[10px] text-gray-500 mb-1">📍 ${item.habitacion}</div>` : ''}
+          ${item.notas ? `<div class="text-[11px] text-gray-500 mb-2">${item.notas}</div>` : ''}
+          <div class="mt-auto flex items-center justify-between gap-2">
+            ${item.precio ? `<span class="text-base font-bold text-green-700">${item.precio}€</span>` : '<span></span>'}
+            ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Ver</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openCatalogoPhoto(id) {
+  if (!id) return;
+  const item = items.find(i => i.id === id);
+  if (!item || !item.foto) return;
+  const imgEl = document.getElementById('photoViewerImg');
+  const noPhotoEl = document.getElementById('photoViewerNoPhoto');
+  imgEl.src = item.foto;
+  imgEl.classList.remove('hidden');
+  noPhotoEl.classList.add('hidden');
+  document.getElementById('photoViewerEditBtn').style.display = 'none';
+  document.getElementById('photoViewerModal').classList.remove('hidden');
+}
+
+function enterCatalogMode() {
+  isCatalogMode = true;
+  // Hide the main app UI
+  document.querySelector('header').classList.add('hidden');
+  document.querySelectorAll('#inventarioSection, #tareasSection, #inventarioFAB').forEach(el => el.classList.add('hidden'));
+  document.getElementById('mainTabsContainer').classList.add('hidden');
+  // Show catalogo
+  document.getElementById('catalogoSection').classList.remove('hidden');
+  // Custom minimal header
+  document.title = 'MudanzApp - En venta y regalo';
+}
+
 // ========== INIT ==========
 document.getElementById('addModal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('addModal')) closeAddModal();
@@ -1274,15 +1445,23 @@ document.getElementById('taskModal').addEventListener('click', (e) => {
   if (e.target === document.getElementById('taskModal')) document.getElementById('taskModal').classList.add('hidden');
 });
 
-switchTab('inventario');
-setFilter('todos');
-setStatusFilter('todos');
-setTaskView('lista');
-renderStats();
-renderTasksStats();
-
-loadAll();
-startPolling();
+// Check URL for catalog mode
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('view') === 'catalogo') {
+  enterCatalogMode();
+  setCatalogoFilter('todos');
+  loadItems().then(() => renderCatalogo());
+  setInterval(() => loadItems().then(() => renderCatalogo()), 10000);
+} else {
+  switchTab('inventario');
+  setFilter('todos');
+  setStatusFilter('todos');
+  setTaskView('lista');
+  renderStats();
+  renderTasksStats();
+  loadAll();
+  startPolling();
+}
 
 // PWA Service Worker
 if ('serviceWorker' in navigator) {
