@@ -377,6 +377,10 @@ tailwind.config = {
     <button onclick="closePhotoViewer()" class="absolute top-3 right-3 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
     </button>
+    <div id="photoViewerLowRes" class="hidden absolute top-3 left-3 px-3 py-2 bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-lg">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      Baja calidad — recambia la foto
+    </div>
     <button id="photoViewerEditBtn" class="absolute bottom-3 right-3 px-4 py-2.5 bg-white text-gray-900 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg hover:bg-gray-100">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
       <span id="photoViewerEditLabel">Cambiar foto</span>
@@ -793,15 +797,23 @@ function renderItems() {
   `).join('');
 }
 
+function isLowResPhoto(foto) {
+  return foto && foto.length < 25000;
+}
+
 function renderItemCard(item) {
   const catEmoji = { mudanza: '🏠', vender: '💰', regalar: '🎁', indeciso: '🤔' }[item.categoria];
   const statusLabels = { pendiente: 'Pendiente', vendido: 'Vendido', movido: 'Movido', regalado: 'Regalado' };
   const isDone = item.estado !== 'pendiente';
+  const lowRes = isLowResPhoto(item.foto);
   return `
     <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 cursor-pointer hover:shadow-md transition active:scale-[0.99] ${isDone ? 'opacity-60' : ''}"
          onclick="showItemDetail('${item.id}')">
-      ${item.foto ? `<img src="${item.foto}" class="photo-thumb flex-shrink-0">` :
-        `<div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl">${catEmoji}</div>`}
+      <div class="relative flex-shrink-0">
+        ${item.foto ? `<img src="${item.foto}" class="photo-thumb">` :
+          `<div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">${catEmoji}</div>`}
+        ${lowRes ? `<div class="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center" title="Foto baja calidad"><svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01"></path></svg></div>` : ''}
+      </div>
       <div class="flex-1 min-w-0">
         <div class="font-semibold text-sm text-gray-900 truncate ${isDone ? 'line-through' : ''}">${item.nombre}</div>
         <div class="flex items-center gap-2 mt-1 flex-wrap">
@@ -1233,15 +1245,19 @@ function openPhotoViewer(id) {
   const noPhotoEl = document.getElementById('photoViewerNoPhoto');
   const editBtn = document.getElementById('photoViewerEditBtn');
   const editLabel = document.getElementById('photoViewerEditLabel');
+  const lowResBanner = document.getElementById('photoViewerLowRes');
+  const lowRes = isLowResPhoto(item.foto);
   if (item.foto) {
     imgEl.src = item.foto;
     imgEl.classList.remove('hidden');
     noPhotoEl.classList.add('hidden');
-    editLabel.textContent = 'Cambiar foto';
+    editLabel.textContent = lowRes ? 'Recambiar foto (baja calidad)' : 'Cambiar foto';
+    if (lowResBanner) lowResBanner.classList.toggle('hidden', !lowRes);
   } else {
     imgEl.classList.add('hidden');
     noPhotoEl.classList.remove('hidden');
     editLabel.textContent = 'Anadir foto';
+    if (lowResBanner) lowResBanner.classList.add('hidden');
   }
   editBtn.onclick = (e) => {
     e.stopPropagation();
@@ -1287,6 +1303,8 @@ function handleEditPhoto(event) {
           document.getElementById('photoViewerImg').classList.remove('hidden');
           document.getElementById('photoViewerNoPhoto').classList.add('hidden');
           document.getElementById('photoViewerEditLabel').textContent = 'Cambiar foto';
+          const lr = document.getElementById('photoViewerLowRes');
+          if (lr) lr.classList.add('hidden');
         }
         // Refresh detail modal
         if (!document.getElementById('itemModal').classList.contains('hidden')) {
