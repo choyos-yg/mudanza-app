@@ -51,14 +51,22 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return json({ error: 'No autenticada' }, 401)
+    if (!authHeader) return json({ error: 'No autenticada (no auth header)' }, 401)
+
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    if (!token) return json({ error: 'No autenticada (token vacio)' }, 401)
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
     })
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return json({ error: 'No autenticada' }, 401)
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token)
+    if (userErr || !userData?.user) {
+      console.error('auth.getUser failed:', userErr)
+      return json({ error: 'No autenticada', detail: userErr?.message || 'no user' }, 401)
+    }
+    const user = userData.user
 
     const body = await req.json().catch(() => ({}))
     const userMessage: string | undefined = body.message
