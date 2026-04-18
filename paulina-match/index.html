@@ -340,25 +340,38 @@ function escapeHtml(s) {
 }
 
 // -------- Init --------
-async function init() {
-  const { data: { session } } = await sb.auth.getSession()
-  if (!session) {
-    showLogin()
-    return
-  }
+let appActivated = false
+
+async function activateApp() {
+  if (appActivated) return
+  appActivated = true
+  hide('view-login')
   showApp()
-  const { data: prof } = await sb.from('user_profile').select('onboarding_status').single()
+  const { data: prof } = await sb.from('user_profile').select('onboarding_status').maybeSingle()
   if (prof?.onboarding_status === 'completed') {
     $('status-line').textContent = '✓ Onboarding completo'
   }
   await loadHistory()
 }
 
-sb.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_IN') location.reload()
-})
+function cleanAuthHash() {
+  if (window.location.hash.includes('access_token')) {
+    history.replaceState(null, '', window.location.pathname + window.location.search)
+  }
+}
 
-init()
+sb.auth.onAuthStateChange(async (event, session) => {
+  if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+    cleanAuthHash()
+    await activateApp()
+  } else if (event === 'INITIAL_SESSION' && !session) {
+    showLogin()
+  } else if (event === 'SIGNED_OUT') {
+    appActivated = false
+    $('messages').innerHTML = ''
+    showLogin()
+  }
+})
 
 // -------- PWA service worker --------
 if ('serviceWorker' in navigator) {
