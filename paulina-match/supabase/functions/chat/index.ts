@@ -56,17 +56,19 @@ serve(async (req) => {
     const token = authHeader.replace(/^Bearer\s+/i, '').trim()
     if (!token) return json({ error: 'No autenticada (token vacio)' }, 401)
 
+    const payload = parseJwtPayload(token)
+    if (!payload || payload.role !== 'authenticated' || !payload.sub) {
+      return json({ error: 'No autenticada', detail: 'invalid jwt payload' }, 401)
+    }
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return json({ error: 'Sesion expirada' }, 401)
+    }
+    const user = { id: payload.sub as string, email: payload.email as string | undefined }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false, autoRefreshToken: false },
     })
-
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token)
-    if (userErr || !userData?.user) {
-      console.error('auth.getUser failed:', userErr)
-      return json({ error: 'No autenticada', detail: userErr?.message || 'no user' }, 401)
-    }
-    const user = userData.user
 
     const body = await req.json().catch(() => ({}))
     const userMessage: string | undefined = body.message
@@ -207,4 +209,17 @@ function json(body: unknown, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json', ...CORS },
   })
+}
+
+function parseJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    const json = atob(padded)
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
 }
